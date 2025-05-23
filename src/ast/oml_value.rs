@@ -1,3 +1,4 @@
+use serde::Deserialize;
 use std::collections::HashMap;
 use std::ops::{Index, IndexMut};
 
@@ -136,6 +137,34 @@ impl OmlValue {
             }
             _ => *self = val,
         }
+    }
+
+    pub fn to_json(&self) -> serde_json::Value {
+        match self {
+            OmlValue::None => serde_json::Value::Null,
+            OmlValue::Bool(b) => (*b).into(),
+            OmlValue::Int64(i) => (*i).into(),
+            OmlValue::Float64(f) => (*f).into(),
+            OmlValue::String(s) => s.clone().into(),
+            OmlValue::Array(vals) => {
+                let mut rets = vec![];
+                for val in vals.iter() {
+                    rets.push(val.to_json());
+                }
+                rets.into()
+            }
+            OmlValue::Map(maps) => {
+                let mut rets = serde_json::Map::new();
+                for (k, v) in maps.iter() {
+                    rets.insert(k.clone(), v.to_json());
+                }
+                rets.into()
+            }
+        }
+    }
+
+    pub fn deserialize<T: for<'a> Deserialize<'a>>(&self) -> anyhow::Result<T> {
+        Ok(serde_json::from_value(self.to_json())?)
     }
 }
 

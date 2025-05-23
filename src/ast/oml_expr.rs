@@ -1,8 +1,10 @@
 use super::eval::{Op1Evaluator, Op2Evaluator};
 use super::oml_value::OmlValue;
 use crate::string_utils::IntoBaseExt;
+use anyhow::anyhow;
 use pest::Parser;
 use pest_derive::Parser;
+use serde::Deserialize;
 use std::cell::UnsafeCell;
 use std::collections::HashMap;
 use std::ops::{Index, IndexMut};
@@ -81,46 +83,60 @@ impl OmlExpr {
         })
     }
 
-    pub fn from_str(content: &str) -> Result<OmlExpr, String> {
-        match OmlParser::parse(Rule::oml, content) {
-            Ok(mut root) => Self::parse_oml(root.next().unwrap()),
-            Err(err) => Err(err.to_string()),
-        }
+    pub fn from_str(content: &str) -> anyhow::Result<OmlExpr> {
+        let mut root = OmlParser::parse(Rule::oml, content)?;
+        Self::parse_oml(root.next().ok_or(anyhow!("empty root"))?)
     }
 
     fn apply(&mut self, val: OmlExpr) {
-        match self {
-            OmlExpr::None => *self = val,
-            OmlExpr::Array(arr) => {
-                if let OmlExpr::Array(arr2) = val {
-                    arr.extend(arr2);
+        match (self, val) {
+            (OmlExpr::IfAnno(if_anno), OmlExpr::IfAnno(if_anno2)) => {
+                for (cond, val) in if_anno2.exprs {
+                    if_anno.exprs.push((cond, val));
                 }
+                if if_anno.default.is_none() {
+                    if_anno.default = if_anno2.default;
+                }
+                return;
             }
-            OmlExpr::Map(map) => {
-                if let OmlExpr::Map(map2) = val {
-                    for (key, val) in map2.into_iter() {
-                        if let Some(self_k) = map.get_mut(&key) {
-                            self_k.apply(val);
-                        } else {
-                            map.insert(key, val);
-                        }
+            (OmlExpr::IfAnno(if_anno), val) => {
+                if_anno.default = Some(Box::new(val));
+                return;
+            }
+            (self_, OmlExpr::IfAnno(if_anno2)) => {
+                let mut self2 = OmlExpr::IfAnno(if_anno2);
+                std::mem::swap(self_, &mut self2);
+                if let OmlExpr::IfAnno(if_anno) = self_ {
+                    if_anno.default = Some(Box::new(self2));
+                }
+                return;
+            }
+            (self_, val) => match self_ {
+                OmlExpr::None => *self_ = val,
+                OmlExpr::Array(arr) => {
+                    if let OmlExpr::Array(arr2) = val {
+                        arr.extend(arr2);
                     }
-                } else {
-                    *self = val;
                 }
-            }
-            OmlExpr::IfAnno(if_anno) => {
-                if let OmlExpr::IfAnno(if_anno2) = val {
-                    if_anno.exprs.extend(if_anno2.exprs);
-                } else if if_anno.default.is_none() {
-                    if_anno.default = Some(Box::new(val));
+                OmlExpr::Map(map) => {
+                    if let OmlExpr::Map(map2) = val {
+                        for (key, val) in map2.into_iter() {
+                            if let Some(self_k) = map.get_mut(&key) {
+                                self_k.apply(val);
+                            } else {
+                                map.insert(key, val);
+                            }
+                        }
+                    } else {
+                        *self_ = val;
+                    }
                 }
-            }
-            _ => {}
+                _ => {}
+            },
         }
     }
 
-    fn parse_oml(root: pest::iterators::Pair<'_, Rule>) -> Result<OmlExpr, String> {
+    fn parse_oml(root: pest::iterators::Pair<'_, Rule>) -> anyhow::Result<OmlExpr> {
         let mut ret = Self::new();
         for root_item in root.into_inner() {
             match root_item.as_rule() {
@@ -135,7 +151,7 @@ impl OmlExpr {
         Ok(ret)
     }
 
-    fn parse_block(root: pest::iterators::Pair<'_, Rule>) -> Result<OmlExpr, String> {
+    fn parse_block(root: pest::iterators::Pair<'_, Rule>) -> anyhow::Result<OmlExpr> {
         let mut anno_if_expr = None;
         let mut head = "".to_string();
         let mut is_array_head = false;
@@ -193,6 +209,7 @@ impl OmlExpr {
         for root_item in root.into_inner() {
             match root_item.as_rule() {
                 Rule::anno_if => {
+                    // TODO
                     anno_if_expr = Some(Self::parse_expr(root_item.into_inner().next().unwrap()))
                 }
                 Rule::ids => keys = Self::parse_ids(root_item),
@@ -429,15 +446,15 @@ impl OmlExpr {
         }
     }
 
-    pub fn root_evalute(&self, path: &str) -> Result<OmlValue, String> {
+    pub fn root_evalute(&self, path: &str) -> anyhow::Result<OmlValue> {
         self[path].evalute_cb(path, &|path| self.root_evalute(path))
     }
 
     pub fn evalute_cb(
         &self,
         path: &str,
-        calc_cb: &impl Fn(&str) -> Result<OmlValue, String>,
-    ) -> Result<OmlValue, String> {
+        calc_cb: &impl Fn(&str) -> anyhow::Result<OmlValue>,
+    ) -> anyhow::Result<OmlValue> {
         Ok(match self {
             OmlExpr::None => OmlValue::None,
             OmlExpr::Value(val) => val.clone(),
@@ -476,7 +493,7 @@ impl OmlExpr {
                 let val = match cond.as_bool() {
                     Some(true) => left,
                     Some(false) => right,
-                    None => return Err("condition is not bool".to_string()),
+                    None => return Err(anyhow!("condition is not bool")),
                 };
                 val.evalute_cb(path, calc_cb)?
             }
@@ -505,7 +522,7 @@ impl OmlExpr {
                             ret = value.evalute_cb(path, calc_cb).ok();
                             break;
                         }
-                        false => return Err("condition is not bool".to_string()),
+                        false => return Err(anyhow!("condition is not bool")),
                     }
                 }
                 ret.unwrap_or(match &if_anno.default {
@@ -516,7 +533,7 @@ impl OmlExpr {
         })
     }
 
-    pub fn evalute(&self) -> Result<OmlValue, String> {
+    pub fn evalute(&self) -> anyhow::Result<OmlValue> {
         let mut last_result = OmlValue::None;
         let mut count = 3;
         while count >= 0 {
@@ -526,10 +543,10 @@ impl OmlExpr {
                 (result, false) => last_result = result,
             }
         }
-        Err("evalute failed.".to_string())
+        Err(anyhow!("evalute failed"))
     }
 
-    fn evalute2(&self, path: &str, last_result: &OmlValue) -> Result<(OmlValue, bool), String> {
+    fn evalute2(&self, path: &str, last_result: &OmlValue) -> anyhow::Result<(OmlValue, bool)> {
         let mut success = true;
         let value = match self {
             OmlExpr::None => OmlValue::None,
@@ -598,7 +615,7 @@ impl OmlExpr {
                     let (value, tmp_success) = match cond.as_bool() {
                         Some(true) => left.evalute2(path, last_result)?,
                         Some(false) => right.evalute2(path, last_result)?,
-                        None => return Err("condition must be boolean.".to_string()),
+                        None => return Err(anyhow!("condition must be boolean")),
                     };
                     success &= tmp_success;
                     value
@@ -649,6 +666,10 @@ impl OmlExpr {
             }
         };
         Ok((value, success))
+    }
+
+    pub fn deserialize<T: for<'a> Deserialize<'a>>(&self) -> anyhow::Result<T> {
+        Ok(serde_json::from_value(self.evalute()?.to_json())?)
     }
 }
 
@@ -888,7 +909,7 @@ impl<'a> IndexMut<&str> for OmlExprWrap<'a> {
 }
 
 impl<'a> OmlExprWrap<'a> {
-    pub fn evalute(&self) -> Result<OmlValue, String> {
+    pub fn evalute(&self) -> anyhow::Result<OmlValue> {
         let path = unsafe { &*self.path.get() }.clone();
         self.expr.root_evalute(&path[..])
     }

@@ -1,9 +1,11 @@
+use anyhow::anyhow;
+
 use super::oml_value::{ApplyExt, OmlValue};
 
 pub(crate) struct Op1Evaluator {}
 
 impl Op1Evaluator {
-    pub fn eval_prefix(op: &str, right: OmlValue) -> Result<OmlValue, String> {
+    pub fn eval_prefix(op: &str, right: OmlValue) -> anyhow::Result<OmlValue> {
         Ok(match (op, right) {
             ("++", OmlValue::Int64(n)) => OmlValue::Int64(n + 1),
             ("++", OmlValue::Float64(n)) => OmlValue::Float64(n + 1.0),
@@ -13,17 +15,17 @@ impl Op1Evaluator {
             ("-", OmlValue::Int64(n)) => OmlValue::Int64(-n),
             ("-", OmlValue::Float64(n)) => OmlValue::Float64(-n),
             ("~", OmlValue::Int64(n)) => OmlValue::Int64(!n),
-            _ => return Err(format!("illegal operator: {}", op)),
+            _ => return Err(anyhow!("illegal operator: {op}")),
         })
     }
 
-    pub fn eval_suffix(op: &str, left: OmlValue) -> Result<OmlValue, String> {
+    pub fn eval_suffix(op: &str, left: OmlValue) -> anyhow::Result<OmlValue> {
         Ok(match (op, left) {
             ("++", OmlValue::Int64(n)) => OmlValue::Int64(n + 1),
             ("++", OmlValue::Float64(n)) => OmlValue::Float64(n + 1.0),
             ("--", OmlValue::Int64(n)) => OmlValue::Int64(n - 1),
             ("--", OmlValue::Float64(n)) => OmlValue::Float64(n - 1.0),
-            _ => return Err(format!("illegal operator: {}", op)),
+            _ => return Err(anyhow!("illegal operator: {op}")),
         })
     }
 }
@@ -31,7 +33,7 @@ impl Op1Evaluator {
 pub(crate) struct Op2Evaluator {}
 
 impl Op2Evaluator {
-    pub fn eval(left: OmlValue, op: &str, right: OmlValue) -> Result<OmlValue, String> {
+    pub fn eval(left: OmlValue, op: &str, right: OmlValue) -> anyhow::Result<OmlValue> {
         match (left, op, right) {
             (OmlValue::Bool(left), _, OmlValue::Bool(right)) => {
                 Ok(OmlValue::Bool(Self::eval_bool(left, op, right)?))
@@ -62,21 +64,21 @@ impl Op2Evaluator {
                 left.apply(right.clone());
                 Ok(OmlValue::Map(left))
             }
-            _ => Err(format!("illegal operator: {}", op)),
+            _ => Err(anyhow!("illegal operator: {op}")),
         }
     }
 
-    fn eval_bool(left: bool, op: &str, right: bool) -> Result<bool, String> {
+    fn eval_bool(left: bool, op: &str, right: bool) -> anyhow::Result<bool> {
         Ok(match op {
             "&&" => left && right,
             "||" => left || right,
             "==" => left == right,
             "!=" => left != right,
-            _ => return Err(format!("illegal operator: {}", op)),
+            _ => return Err(anyhow!("illegal operator: {op}")),
         })
     }
 
-    fn eval_int64(left: i64, op: &str, right: i64) -> Result<OmlValue, String> {
+    fn eval_int64(left: i64, op: &str, right: i64) -> anyhow::Result<OmlValue> {
         Ok(OmlValue::Int64(match op {
             "+" => left + right,
             "-" => left - right,
@@ -96,11 +98,11 @@ impl Op2Evaluator {
             ">=" => return Ok(OmlValue::Bool(left >= right)),
             "==" => return Ok(OmlValue::Bool(left == right)),
             "!=" => return Ok(OmlValue::Bool(left != right)),
-            _ => return Err(format!("illegal operator: {}", op)),
+            _ => return Err(anyhow!("illegal operator: {op}")),
         }))
     }
 
-    fn eval_float64(left: f64, op: &str, right: f64) -> Result<OmlValue, String> {
+    fn eval_float64(left: f64, op: &str, right: f64) -> anyhow::Result<OmlValue> {
         Ok(OmlValue::Float64(match op {
             "+" => left + right,
             "-" => left - right,
@@ -114,16 +116,16 @@ impl Op2Evaluator {
             ">=" => return Ok(OmlValue::Bool(left >= right)),
             "==" => return Ok(OmlValue::Bool(left == right)),
             "!=" => return Ok(OmlValue::Bool(left != right)),
-            _ => return Err(format!("illegal operator: {}", op)),
+            _ => return Err(anyhow!("illegal operator: {op}")),
         }))
     }
 
-    fn eval_string(left: &str, op: &str, right: &str) -> Result<OmlValue, String> {
+    fn eval_string(left: &str, op: &str, right: &str) -> anyhow::Result<OmlValue> {
         match op {
             "+" => Ok(OmlValue::String(format!("{}{}", left, right))),
             "==" => Ok(OmlValue::Bool(left == right)),
             "!=" => Ok(OmlValue::Bool(left != right)),
-            _ => Err(format!("illegal operator: {}", op)),
+            _ => Err(anyhow!("illegal operator: {op}")),
         }
     }
 }

@@ -32,7 +32,7 @@ pub extern "C" fn oml_expr_from_str(
         }
         Err(err) => {
             unsafe { *ppexpr = std::ptr::null_mut() };
-            unsafe { *pperr = CString::new(err).unwrap().into_raw() };
+            unsafe { *pperr = CString::new(format!("{err}")).unwrap().into_raw() };
             false.as_cint()
         }
     }
@@ -102,7 +102,7 @@ pub extern "C" fn oml_expr_evalute(
         }
         Err(err) => {
             unsafe { *ppval = std::ptr::null_mut() };
-            unsafe { *pperr = CString::new(err).unwrap().into_raw() };
+            unsafe { *pperr = CString::new(format!("{err}")).unwrap().into_raw() };
             false
         }
     };
