@@ -88,7 +88,7 @@ impl OmlExpr {
         Self::parse_oml(root.next().ok_or(anyhow!("empty root"))?)
     }
 
-    fn apply(&mut self, val: OmlExpr) {
+    fn apply(&mut self, val: OmlExpr) -> anyhow::Result<()> {
         match (self, val) {
             (OmlExpr::IfAnno(if_anno), OmlExpr::IfAnno(if_anno2)) => {
                 for (cond, val) in if_anno2.exprs {
@@ -97,11 +97,11 @@ impl OmlExpr {
                 if if_anno.default.is_none() {
                     if_anno.default = if_anno2.default;
                 }
-                return;
+                return Ok(());
             }
             (OmlExpr::IfAnno(if_anno), val) => {
                 if_anno.default = Some(Box::new(val));
-                return;
+                return Ok(());
             }
             (self_, OmlExpr::IfAnno(if_anno2)) => {
                 let mut self2 = OmlExpr::IfAnno(if_anno2);
@@ -109,7 +109,7 @@ impl OmlExpr {
                 if let OmlExpr::IfAnno(if_anno) = self_ {
                     if_anno.default = Some(Box::new(self2));
                 }
-                return;
+                return Ok(());
             }
             (self_, val) => match self_ {
                 OmlExpr::None => *self_ = val,
@@ -122,7 +122,7 @@ impl OmlExpr {
                     if let OmlExpr::Map(map2) = val {
                         for (key, val) in map2.into_iter() {
                             if let Some(self_k) = map.get_mut(&key) {
-                                self_k.apply(val);
+                                self_k.apply(val)?;
                             } else {
                                 map.insert(key, val);
                             }
@@ -131,9 +131,10 @@ impl OmlExpr {
                         *self_ = val;
                     }
                 }
-                _ => {}
+                _ => Err(anyhow!("disallow apply"))?,
             },
         }
+        Ok(())
     }
 
     fn parse_oml(root: pest::iterators::Pair<'_, Rule>) -> anyhow::Result<OmlExpr> {
@@ -142,7 +143,7 @@ impl OmlExpr {
             match root_item.as_rule() {
                 Rule::group_block => {
                     let val = Self::parse_block(root_item)?;
-                    ret.apply(val);
+                    ret.apply(val)?;
                 }
                 Rule::EOI => (),
                 _ => unreachable!(),
@@ -174,12 +175,12 @@ impl OmlExpr {
                         tmp_map
                             .entry(keys.remove(keys.len() - 1))
                             .or_insert(OmlExpr::None)
-                            .apply(value);
+                            .apply(value)?;
                         value = OmlExpr::Map(tmp_map);
                     }
                     ret.entry(keys.remove(0))
                         .or_insert(OmlExpr::None)
-                        .apply(value);
+                        .apply(value)?;
                 }
                 _ => unreachable!(),
             }
@@ -686,7 +687,7 @@ impl PathAppendExt for str {
             "super" => self.remove_once().to_string(),
             _ => match self.is_empty() {
                 true => name.to_string(),
-                false => format!("{}.{}", self, name),
+                false => format!("{self}.{name}"),
             },
         }
     }
@@ -694,7 +695,7 @@ impl PathAppendExt for str {
     fn append_num(&self, num: usize) -> String {
         match self.is_empty() {
             true => num.to_string(),
-            false => format!("{}.{}", self, num),
+            false => format!("{self}.{num}"),
         }
     }
 
@@ -774,12 +775,13 @@ impl OmlExpr {
                 continue;
             } else if path_item.starts_with('[') {
                 let num = &path_item[1..path_item.len() - 1];
-                let num: usize = num.parse().unwrap();
-                if let Some(obj) = obj_ref.get_at(num) {
-                    obj_ref = obj;
-                } else {
-                    return None;
+                if let Ok(num) = num.parse() {
+                    if let Some(obj) = obj_ref.get_at(num) {
+                        obj_ref = obj;
+                        continue;
+                    }
                 }
+                return None;
             } else {
                 if let OmlExpr::Map(map) = obj_ref {
                     if let Some(obj) = map.get(path_item) {
@@ -801,8 +803,10 @@ impl OmlExpr {
                 continue;
             } else if path_item.starts_with('[') {
                 let num = &path_item[1..path_item.len() - 1];
-                let num: usize = num.parse().unwrap();
-                obj_ref = obj_ref.get_at_mut(num);
+                if let Ok(num) = num.parse() {
+                    obj_ref = obj_ref.get_at_mut(num);
+                    continue;
+                }
             } else {
                 let map = match obj_ref {
                     OmlExpr::Map(map) => map,
@@ -867,8 +871,8 @@ impl<'a> Index<usize> for OmlExprWrap<'a> {
     fn index(&self, index: usize) -> &Self::Output {
         let path = unsafe { &mut *self.path.get() };
         *path = match path.len() {
-            0 => format!("[{}]", index),
-            _ => format!("{}.[{}]", path, index),
+            0 => format!("[{index}]"),
+            _ => format!("{path}.[{index}]"),
         };
         self
     }
@@ -878,8 +882,8 @@ impl<'a> IndexMut<usize> for OmlExprWrap<'a> {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         let path = self.path.get_mut();
         *path = match path.len() {
-            0 => format!("[{}]", index),
-            _ => format!("{}.[{}]", path, index),
+            0 => format!("[{index}]"),
+            _ => format!("{path}.[{index}]"),
         };
         self
     }
@@ -891,7 +895,7 @@ impl<'a> Index<&str> for OmlExprWrap<'a> {
         let path = unsafe { &mut *self.path.get() };
         *path = match path.len() {
             0 => index.to_string(),
-            _ => format!("{}.{}", path, index),
+            _ => format!("{path}.{index}"),
         };
         self
     }
@@ -902,7 +906,7 @@ impl<'a> IndexMut<&str> for OmlExprWrap<'a> {
         let path = self.path.get_mut();
         *path = match path.len() {
             0 => index.to_string(),
-            _ => format!("{}.{}", path, index),
+            _ => format!("{path}.{index}"),
         };
         self
     }
