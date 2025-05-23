@@ -328,27 +328,13 @@ impl OmlValue {
     }
 }
 
-pub trait OmlValueGetExt {
-    fn get(&self, index: &str) -> Option<&OmlValue>;
-    // fn get_mut(&mut self, index: &str) -> Option<&mut OmlValue>;
-}
-
-impl OmlValueGetExt for Option<&OmlValue> {
-    fn get(&self, index: &str) -> Option<&OmlValue> {
-        match *self {
-            Some(value) => value.get(index),
-            None => None,
-        }
-    }
-}
-
 pub trait ApplyExt {
     fn apply(&mut self, val: Self);
 }
 
 impl ApplyExt for HashMap<String, OmlValue> {
     fn apply(&mut self, val: Self) {
-        for (key, mut val) in val.into_iter() {
+        for (key, val) in val.into_iter() {
             if let Some(self_k) = self.get_mut(&key) {
                 self_k.apply(val);
             } else {
