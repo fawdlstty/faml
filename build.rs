@@ -8,5 +8,5 @@ fn main() {
         ..Default::default()
     };
     _ = cbindgen::generate_with_config(&crate_dir, config)
-        .map(|p| p.write_to_file(crate_dir.join("include/oml/oml.h")));
+        .map(|p| p.write_to_file(crate_dir.join("include/faml/faml.h")));
 }

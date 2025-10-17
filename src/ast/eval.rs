@@ -1,30 +1,30 @@
 use anyhow::anyhow;
 
-use super::oml_value::{ApplyExt, OmlValue};
+use super::faml_value::{ApplyExt, FamlValue};
 
 pub(crate) struct Op1Evaluator {}
 
 impl Op1Evaluator {
-    pub fn eval_prefix(op: &str, right: OmlValue) -> anyhow::Result<OmlValue> {
+    pub fn eval_prefix(op: &str, right: FamlValue) -> anyhow::Result<FamlValue> {
         Ok(match (op, right) {
-            ("++", OmlValue::Int64(n)) => OmlValue::Int64(n + 1),
-            ("++", OmlValue::Float64(n)) => OmlValue::Float64(n + 1.0),
-            ("--", OmlValue::Int64(n)) => OmlValue::Int64(n - 1),
-            ("--", OmlValue::Float64(n)) => OmlValue::Float64(n - 1.0),
-            ("!", OmlValue::Bool(b)) => OmlValue::Bool(!b),
-            ("-", OmlValue::Int64(n)) => OmlValue::Int64(-n),
-            ("-", OmlValue::Float64(n)) => OmlValue::Float64(-n),
-            ("~", OmlValue::Int64(n)) => OmlValue::Int64(!n),
+            ("++", FamlValue::Int64(n)) => FamlValue::Int64(n + 1),
+            ("++", FamlValue::Float64(n)) => FamlValue::Float64(n + 1.0),
+            ("--", FamlValue::Int64(n)) => FamlValue::Int64(n - 1),
+            ("--", FamlValue::Float64(n)) => FamlValue::Float64(n - 1.0),
+            ("!", FamlValue::Bool(b)) => FamlValue::Bool(!b),
+            ("-", FamlValue::Int64(n)) => FamlValue::Int64(-n),
+            ("-", FamlValue::Float64(n)) => FamlValue::Float64(-n),
+            ("~", FamlValue::Int64(n)) => FamlValue::Int64(!n),
             _ => return Err(anyhow!("illegal operator: {op}")),
         })
     }
 
-    pub fn eval_suffix(op: &str, left: OmlValue) -> anyhow::Result<OmlValue> {
+    pub fn eval_suffix(op: &str, left: FamlValue) -> anyhow::Result<FamlValue> {
         Ok(match (op, left) {
-            ("++", OmlValue::Int64(n)) => OmlValue::Int64(n + 1),
-            ("++", OmlValue::Float64(n)) => OmlValue::Float64(n + 1.0),
-            ("--", OmlValue::Int64(n)) => OmlValue::Int64(n - 1),
-            ("--", OmlValue::Float64(n)) => OmlValue::Float64(n - 1.0),
+            ("++", FamlValue::Int64(n)) => FamlValue::Int64(n + 1),
+            ("++", FamlValue::Float64(n)) => FamlValue::Float64(n + 1.0),
+            ("--", FamlValue::Int64(n)) => FamlValue::Int64(n - 1),
+            ("--", FamlValue::Float64(n)) => FamlValue::Float64(n - 1.0),
             _ => return Err(anyhow!("illegal operator: {op}")),
         })
     }
@@ -33,36 +33,38 @@ impl Op1Evaluator {
 pub(crate) struct Op2Evaluator {}
 
 impl Op2Evaluator {
-    pub fn eval(left: OmlValue, op: &str, right: OmlValue) -> anyhow::Result<OmlValue> {
+    pub fn eval(left: FamlValue, op: &str, right: FamlValue) -> anyhow::Result<FamlValue> {
         match (left, op, right) {
-            (OmlValue::Bool(left), _, OmlValue::Bool(right)) => {
-                Ok(OmlValue::Bool(Self::eval_bool(left, op, right)?))
+            (FamlValue::Bool(left), _, FamlValue::Bool(right)) => {
+                Ok(FamlValue::Bool(Self::eval_bool(left, op, right)?))
             }
-            (OmlValue::Int64(left), _, OmlValue::Int64(right)) => Self::eval_int64(left, op, right),
-            (OmlValue::Float64(left), _, OmlValue::Float64(right)) => {
+            (FamlValue::Int64(left), _, FamlValue::Int64(right)) => {
+                Self::eval_int64(left, op, right)
+            }
+            (FamlValue::Float64(left), _, FamlValue::Float64(right)) => {
                 Self::eval_float64(left, op, right)
             }
-            (OmlValue::Int64(left), _, OmlValue::Float64(right)) => {
+            (FamlValue::Int64(left), _, FamlValue::Float64(right)) => {
                 Self::eval_float64(left as f64, op, right)
             }
-            (OmlValue::Float64(left), _, OmlValue::Int64(right)) => {
+            (FamlValue::Float64(left), _, FamlValue::Int64(right)) => {
                 Self::eval_float64(left, op, right as f64)
             }
-            (OmlValue::String(left), _, OmlValue::String(right)) => {
+            (FamlValue::String(left), _, FamlValue::String(right)) => {
                 Self::eval_string(&left, op, &right)
             }
-            (OmlValue::String(left), "*", OmlValue::Int64(right)) if right >= 0 => {
-                Ok(OmlValue::String(left.repeat(right as usize)))
+            (FamlValue::String(left), "*", FamlValue::Int64(right)) if right >= 0 => {
+                Ok(FamlValue::String(left.repeat(right as usize)))
             }
-            (OmlValue::Array(left), "+", OmlValue::Array(right)) => {
+            (FamlValue::Array(left), "+", FamlValue::Array(right)) => {
                 let mut left = left.clone();
                 left.extend(right.clone());
-                Ok(OmlValue::Array(left))
+                Ok(FamlValue::Array(left))
             }
-            (OmlValue::Map(left), "+", OmlValue::Map(right)) => {
+            (FamlValue::Map(left), "+", FamlValue::Map(right)) => {
                 let mut left = left.clone();
                 left.apply(right.clone());
-                Ok(OmlValue::Map(left))
+                Ok(FamlValue::Map(left))
             }
             _ => Err(anyhow!("illegal operator: {op}")),
         }
@@ -78,13 +80,13 @@ impl Op2Evaluator {
         })
     }
 
-    fn eval_int64(left: i64, op: &str, right: i64) -> anyhow::Result<OmlValue> {
-        Ok(OmlValue::Int64(match op {
+    fn eval_int64(left: i64, op: &str, right: i64) -> anyhow::Result<FamlValue> {
+        Ok(FamlValue::Int64(match op {
             "+" => left + right,
             "-" => left - right,
             "*" => left * right,
             "/" => left / right,
-            "**" if right < 0 => return Ok(OmlValue::Float64((left as f64).powf(right as f64))),
+            "**" if right < 0 => return Ok(FamlValue::Float64((left as f64).powf(right as f64))),
             "**" => left.pow(right as u32),
             "%" => left % right,
             "|" => left | right,
@@ -92,39 +94,39 @@ impl Op2Evaluator {
             "<<" => left << right,
             ">>" => left >> right,
             "^" => left ^ right,
-            "<" => return Ok(OmlValue::Bool(left < right)),
-            "<=" => return Ok(OmlValue::Bool(left <= right)),
-            ">" => return Ok(OmlValue::Bool(left > right)),
-            ">=" => return Ok(OmlValue::Bool(left >= right)),
-            "==" => return Ok(OmlValue::Bool(left == right)),
-            "!=" => return Ok(OmlValue::Bool(left != right)),
+            "<" => return Ok(FamlValue::Bool(left < right)),
+            "<=" => return Ok(FamlValue::Bool(left <= right)),
+            ">" => return Ok(FamlValue::Bool(left > right)),
+            ">=" => return Ok(FamlValue::Bool(left >= right)),
+            "==" => return Ok(FamlValue::Bool(left == right)),
+            "!=" => return Ok(FamlValue::Bool(left != right)),
             _ => return Err(anyhow!("illegal operator: {op}")),
         }))
     }
 
-    fn eval_float64(left: f64, op: &str, right: f64) -> anyhow::Result<OmlValue> {
-        Ok(OmlValue::Float64(match op {
+    fn eval_float64(left: f64, op: &str, right: f64) -> anyhow::Result<FamlValue> {
+        Ok(FamlValue::Float64(match op {
             "+" => left + right,
             "-" => left - right,
             "*" => left * right,
             "/" => left / right,
             "**" => left.powf(right),
             "%" => left % right,
-            "<" => return Ok(OmlValue::Bool(left < right)),
-            "<=" => return Ok(OmlValue::Bool(left <= right)),
-            ">" => return Ok(OmlValue::Bool(left > right)),
-            ">=" => return Ok(OmlValue::Bool(left >= right)),
-            "==" => return Ok(OmlValue::Bool(left == right)),
-            "!=" => return Ok(OmlValue::Bool(left != right)),
+            "<" => return Ok(FamlValue::Bool(left < right)),
+            "<=" => return Ok(FamlValue::Bool(left <= right)),
+            ">" => return Ok(FamlValue::Bool(left > right)),
+            ">=" => return Ok(FamlValue::Bool(left >= right)),
+            "==" => return Ok(FamlValue::Bool(left == right)),
+            "!=" => return Ok(FamlValue::Bool(left != right)),
             _ => return Err(anyhow!("illegal operator: {op}")),
         }))
     }
 
-    fn eval_string(left: &str, op: &str, right: &str) -> anyhow::Result<OmlValue> {
+    fn eval_string(left: &str, op: &str, right: &str) -> anyhow::Result<FamlValue> {
         match op {
-            "+" => Ok(OmlValue::String(format!("{}{}", left, right))),
-            "==" => Ok(OmlValue::Bool(left == right)),
-            "!=" => Ok(OmlValue::Bool(left != right)),
+            "+" => Ok(FamlValue::String(format!("{}{}", left, right))),
+            "==" => Ok(FamlValue::Bool(left == right)),
+            "!=" => Ok(FamlValue::Bool(left != right)),
             _ => Err(anyhow!("illegal operator: {op}")),
         }
     }

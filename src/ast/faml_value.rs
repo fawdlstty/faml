@@ -3,78 +3,78 @@ use std::collections::HashMap;
 use std::ops::{Index, IndexMut};
 
 #[derive(Debug, Clone)]
-pub enum OmlValue {
+pub enum FamlValue {
     None,
     Bool(bool),
     Int64(i64),
     Float64(f64),
     String(String),
-    Array(Vec<OmlValue>),
-    Map(HashMap<String, OmlValue>),
+    Array(Vec<FamlValue>),
+    Map(HashMap<String, FamlValue>),
 }
 
-impl OmlValue {
+impl FamlValue {
     pub fn is_none(&self) -> bool {
         match self {
-            OmlValue::None => true,
+            FamlValue::None => true,
             _ => false,
         }
     }
 
     pub fn is_bool(&self) -> bool {
         match self {
-            OmlValue::Bool(_) => true,
+            FamlValue::Bool(_) => true,
             _ => false,
         }
     }
 
     pub fn as_bool(&self) -> Option<bool> {
         match self {
-            OmlValue::Bool(b) => Some(*b),
+            FamlValue::Bool(b) => Some(*b),
             _ => None,
         }
     }
 
     pub fn is_int(&self) -> bool {
         match self {
-            OmlValue::Int64(_) => true,
+            FamlValue::Int64(_) => true,
             _ => false,
         }
     }
 
     pub fn as_int(&self) -> Option<i64> {
         match self {
-            OmlValue::Int64(i) => Some(*i),
+            FamlValue::Int64(i) => Some(*i),
             _ => None,
         }
     }
 
     pub fn is_float(&self) -> bool {
         match self {
-            OmlValue::Float64(_) => true,
+            FamlValue::Float64(_) => true,
             _ => false,
         }
     }
 
     pub fn is_str(&self) -> bool {
         match self {
-            OmlValue::String(_) => true,
+            FamlValue::String(_) => true,
             _ => false,
         }
     }
 
     pub fn as_str(&self) -> String {
         match self {
-            OmlValue::None => "none".to_string(),
-            OmlValue::Bool(b) => b.to_string(),
-            OmlValue::Int64(i) => i.to_string(),
-            OmlValue::Float64(f) => f.to_string(),
-            OmlValue::String(s) => s.clone(),
-            OmlValue::Array(arr) => {
+            FamlValue::None => "none".to_string(),
+            FamlValue::Bool(b) => b.to_string(),
+            FamlValue::Int64(i) => i.to_string(),
+            FamlValue::Float64(f) => f.to_string(),
+            FamlValue::String(s) => s.clone(),
+            FamlValue::Array(arr) => {
                 let arr: Vec<_> = arr.iter().map(|item| item.as_str()).collect();
                 format!("[{}]", arr.join(", "))
             }
-            OmlValue::Map(map) => {
+            FamlValue::Map(map) => {
                 let mut ret = "{ ".to_string();
                 for (key, value) in map.iter() {
                     if !ret.is_empty() {
@@ -92,44 +92,44 @@ impl OmlValue {
 
     pub fn as_float(&self) -> Option<f64> {
         match self {
-            OmlValue::Float64(f) => Some(*f),
+            FamlValue::Float64(f) => Some(*f),
             _ => None,
         }
     }
 
     pub fn is_array(&self) -> bool {
         match self {
-            OmlValue::Array(_) => true,
+            FamlValue::Array(_) => true,
             _ => false,
         }
     }
 
-    pub fn as_array(&self) -> Option<Vec<OmlValue>> {
+    pub fn as_array(&self) -> Option<Vec<FamlValue>> {
         match self {
-            OmlValue::Array(arr) => Some(arr.clone()),
+            FamlValue::Array(arr) => Some(arr.clone()),
             _ => None,
         }
     }
 
     pub fn is_map(&self) -> bool {
         match self {
-            OmlValue::Map(_) => true,
+            FamlValue::Map(_) => true,
             _ => false,
         }
     }
 
-    pub fn as_map(&self) -> Option<HashMap<String, OmlValue>> {
+    pub fn as_map(&self) -> Option<HashMap<String, FamlValue>> {
         match self {
-            OmlValue::Map(map) => Some(map.clone()),
+            FamlValue::Map(map) => Some(map.clone()),
             _ => None,
         }
     }
 
-    fn apply(&mut self, val: OmlValue) {
+    fn apply(&mut self, val: FamlValue) {
         match self {
-            OmlValue::Array(arr) => arr.push(val),
-            OmlValue::Map(map) => {
-                if let OmlValue::Map(map2) = val {
+            FamlValue::Array(arr) => arr.push(val),
+            FamlValue::Map(map) => {
+                if let FamlValue::Map(map2) = val {
                     map.apply(map2);
                 } else {
                     *self = val;
@@ -141,19 +141,19 @@ impl OmlValue {
 
     pub fn to_json(&self) -> serde_json::Value {
         match self {
-            OmlValue::None => serde_json::Value::Null,
-            OmlValue::Bool(b) => (*b).into(),
-            OmlValue::Int64(i) => (*i).into(),
-            OmlValue::Float64(f) => (*f).into(),
-            OmlValue::String(s) => s.clone().into(),
-            OmlValue::Array(vals) => {
+            FamlValue::None => serde_json::Value::Null,
+            FamlValue::Bool(b) => (*b).into(),
+            FamlValue::Int64(i) => (*i).into(),
+            FamlValue::Float64(f) => (*f).into(),
+            FamlValue::String(s) => s.clone().into(),
+            FamlValue::Array(vals) => {
                 let mut rets = vec![];
                 for val in vals.iter() {
                     rets.push(val.to_json());
                 }
                 rets.into()
             }
-            OmlValue::Map(maps) => {
+            FamlValue::Map(maps) => {
                 let mut rets = serde_json::Map::new();
                 for (k, v) in maps.iter() {
                     rets.insert(k.clone(), v.to_json());
@@ -168,28 +168,28 @@ impl OmlValue {
     }
 }
 
-impl Index<usize> for OmlValue {
-    type Output = OmlValue;
+impl Index<usize> for FamlValue {
+    type Output = FamlValue;
     fn index(&self, index: usize) -> &Self::Output {
-        static NULL_EXPR: OmlValue = OmlValue::None;
+        static NULL_EXPR: FamlValue = FamlValue::None;
         match self {
-            OmlValue::Array(arr) => arr.get(index).unwrap_or(&NULL_EXPR),
+            FamlValue::Array(arr) => arr.get(index).unwrap_or(&NULL_EXPR),
             _ => &NULL_EXPR,
         }
     }
 }
 
-impl IndexMut<usize> for OmlValue {
+impl IndexMut<usize> for FamlValue {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         match self {
-            OmlValue::Array(arr) => {
+            FamlValue::Array(arr) => {
                 while arr.len() <= index {
-                    arr.push(OmlValue::None);
+                    arr.push(FamlValue::None);
                 }
                 arr.get_mut(index).unwrap()
             }
             _ => {
-                let mut tmp = OmlValue::Array(vec![]);
+                let mut tmp = FamlValue::Array(vec![]);
                 std::mem::swap(self, &mut tmp);
                 self.index_mut(index)
             }
@@ -197,10 +197,10 @@ impl IndexMut<usize> for OmlValue {
     }
 }
 
-impl Index<&str> for OmlValue {
-    type Output = OmlValue;
+impl Index<&str> for FamlValue {
+    type Output = FamlValue;
     fn index(&self, index: &str) -> &Self::Output {
-        static NULL_EXPR: OmlValue = OmlValue::None;
+        static NULL_EXPR: FamlValue = FamlValue::None;
         if index == "" {
             return self;
         } else if let Some(p) = index.find('.') {
@@ -208,24 +208,24 @@ impl Index<&str> for OmlValue {
             self.index(a).index(&b[1..])
         } else {
             match self {
-                OmlValue::Map(map) => map.get(index).unwrap_or(&NULL_EXPR),
+                FamlValue::Map(map) => map.get(index).unwrap_or(&NULL_EXPR),
                 _ => &NULL_EXPR,
             }
         }
     }
 }
 
-impl IndexMut<&str> for OmlValue {
+impl IndexMut<&str> for FamlValue {
     fn index_mut(&mut self, index: &str) -> &mut Self::Output {
         if index == "" {
             return self;
         } else {
             if !self.is_map() {
-                *self = OmlValue::Map(HashMap::new());
+                *self = FamlValue::Map(HashMap::new());
             }
-            if let OmlValue::Map(map) = self {
+            if let FamlValue::Map(map) = self {
                 if map.get(index).is_none() {
-                    let val = OmlValue::None;
+                    let val = FamlValue::None;
                     map.insert(index.to_string(), val.clone());
                 }
                 map.get_mut(index).unwrap()
@@ -236,9 +236,9 @@ impl IndexMut<&str> for OmlValue {
     }
 }
 
-impl OmlValue {
+impl FamlValue {
     pub fn get_at(&self, index: usize) -> Option<&Self> {
-        if let OmlValue::Array(arr) = self {
+        if let FamlValue::Array(arr) = self {
             arr.get(index)
         } else {
             None
@@ -246,7 +246,7 @@ impl OmlValue {
     }
 
     pub fn get_at_mut(&mut self, index: usize) -> Option<&mut Self> {
-        if let OmlValue::Array(arr) = self {
+        if let FamlValue::Array(arr) = self {
             arr.get_mut(index)
         } else {
             None
@@ -266,7 +266,7 @@ impl OmlValue {
                 }
             }
             None => {
-                if let OmlValue::Map(map) = self {
+                if let FamlValue::Map(map) = self {
                     map.get(index)
                 } else {
                     None
@@ -276,7 +276,7 @@ impl OmlValue {
     }
 
     pub fn get_mut(&mut self, index: &str) -> Option<&mut Self> {
-        if let OmlValue::Map(map) = self {
+        if let FamlValue::Map(map) = self {
             map.get_mut(index)
         } else {
             None
@@ -332,7 +332,7 @@ pub trait ApplyExt {
     fn apply(&mut self, val: Self);
 }
 
-impl ApplyExt for HashMap<String, OmlValue> {
+impl ApplyExt for HashMap<String, FamlValue> {
     fn apply(&mut self, val: Self) {
         for (key, val) in val.into_iter() {
             if let Some(self_k) = self.get_mut(&key) {
@@ -344,24 +344,24 @@ impl ApplyExt for HashMap<String, OmlValue> {
     }
 }
 
-impl OmlValue {
+impl FamlValue {
     pub fn set_null(&mut self) {
-        *self = OmlValue::None;
+        *self = FamlValue::None;
     }
 
     pub fn set_bool(&mut self, val: bool) {
-        *self = OmlValue::Bool(val);
+        *self = FamlValue::Bool(val);
     }
 
     pub fn set_int(&mut self, val: i64) {
-        *self = OmlValue::Int64(val);
+        *self = FamlValue::Int64(val);
     }
 
     pub fn set_float(&mut self, val: f64) {
-        *self = OmlValue::Float64(val);
+        *self = FamlValue::Float64(val);
     }
 
     pub fn set_string(&mut self, val: impl Into<String>) {
-        *self = OmlValue::String(val.into());
+        *self = FamlValue::String(val.into());
     }
 }

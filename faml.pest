@@ -35,4 +35,4 @@ group_head       = { "[" ~ ids ~ "]" }
 group_array_head = { "[[" ~ ids ~ "]]" }
 group_block      = { anno_if? ~ (group_head | group_array_head) ~ assign_pair* }
 
-oml = { SOI ~ (group_block)* ~ EOI }
+faml = { SOI ~ (group_block)* ~ EOI }

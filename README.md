@@ -1,7 +1,7 @@
-# oml
+# faml
 
-![version](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Ffawdlstty%2Foml%2Fmain%2FCargo.toml&query=package.version&label=version)
-![status](https://img.shields.io/github/actions/workflow/status/fawdlstty/oml/rust.yml)
+![version](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Ffawdlstty%2Ffaml%2Fmain%2FCargo.toml&query=package.version&label=version)
+![status](https://img.shields.io/github/actions/workflow/status/fawdlstty/faml/rust.yml)
 
 English | [简体中文](README.zh_CN.md)
 
@@ -11,16 +11,16 @@ Open Markup Language! A dynamic configuration scripting language that can embed 
 
 ### rust
 
-Install: Run `cargo add oml` in the project directory
+Install: Run `cargo add faml` in the project directory
 
 ```rust
 fn main() {
-    let oml_str = r#"
+    let faml_str = r#"
 [hello]
 value = 12
 name = $"hello {value + 12}"
 "#;
-    let mut eroot = OmlExpr::from_str(oml_str).unwrap();
+    let mut eroot = FamlExpr::from_str(faml_str).unwrap();
     eroot["hello"]["value"].set_int(30);
     let root = eroot.evalute().unwrap();
     println!("{}", root["hello"]["name"].as_str()); // hello 42
@@ -32,8 +32,8 @@ name = $"hello {value + 12}"
 Download and compile static libraries (or dynamic libraries)
 
 ```shell
-git clone git@github.com:fawdlstty/oml.git
-cd oml
+git clone git@github.com:fawdlstty/faml.git
+cd faml
 cargo build --release --lib # debug: cargo build --lib
 ```
 
@@ -43,17 +43,17 @@ The static library (or dynamic library) is generated in the `target/release` dir
 #include <iostream>
 #include <string>
 
-#include "oml/oml.hpp"
+#include "faml/faml.hpp"
 #ifdef _MSC_VER
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "ntdll.lib")
 #pragma comment(lib, "bcrypt.lib")
 #pragma comment(lib, "Userenv.lib")
-#pragma comment(lib, "oml.lib")
+#pragma comment(lib, "faml.lib")
 #endif
 
 int main() {
-    auto oexpr = oml::OmlExpr::from_str(R"(
+    auto oexpr = faml::FamlExpr::from_str(R"(
 [hello]
 value = 12
 name = $"hello {value + 12}"
@@ -62,14 +62,14 @@ name = $"hello {value + 12}"
         std::cout << std::get<std::string>(oeroot) << std::endl;
         return 0;
     }
-    auto eroot = std::get<oml::OmlExpr>(oeroot);
+    auto eroot = std::get<faml::FamlExpr>(oeroot);
     eroot["hello"]["value"].set_int(30);
     auto oroot = eroot.evalute();
     if (oroot.index() == 1) {
         std::cout << std::get<std::string>(oroot) << std::endl;
         return 0;
     }
-    auto root = std::get<oml::OmlValue>(oroot);
+    auto root = std::get<faml::FamlValue>(oroot);
     std::cout << root["hello"]["name"].as_str() << std::endl; // hello 42
     return 0;
 }
@@ -79,7 +79,7 @@ name = $"hello {value + 12}"
 
 Run command:
 ```sh
-dotnet add package oml
+dotnet add package faml
 ```
 
 Example:
@@ -94,7 +94,7 @@ namespace test {
 value = 12
 name = $"hello {value + 12}"
 """;
-            var eroot = oml.OmlExpr.from_str (src);
+            var eroot = faml.FamlExpr.from_str (src);
             eroot ["hello"] ["value"].set_int (30);
             var root = eroot.evalute ();
             Console.WriteLine (root ["hello"] ["name"].as_str()); // hello 42
@@ -108,7 +108,7 @@ name = $"hello {value + 12}"
 
 The value is available when the conditions are met:
 
-```oml
+```faml
 [hello]
 
 value = 12

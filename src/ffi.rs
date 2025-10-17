@@ -1,4 +1,4 @@
-use crate::{OmlExpr, OmlValue};
+use crate::{FamlExpr, FamlValue};
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_double, c_int, c_longlong, c_void};
 
@@ -8,25 +8,21 @@ trait AsCInt {
 
 impl AsCInt for bool {
     fn as_cint(&self) -> c_int {
-        if *self {
-            1
-        } else {
-            0
-        }
+        if *self { 1 } else { 0 }
     }
 }
 
-/// Try parse string and get oml-expr pointer
-#[no_mangle]
-pub extern "C" fn oml_expr_from_str(
+/// Try parse string and get faml-expr pointer
+#[unsafe(no_mangle)]
+pub extern "C" fn faml_expr_from_str(
     psrc: *const c_char,
     ppexpr: *mut *mut c_void,
     pperr: *mut *const c_char,
 ) -> c_int {
     let src = unsafe { CStr::from_ptr(psrc).to_str().unwrap_or("") };
-    match OmlExpr::from_str(src) {
+    match FamlExpr::from_str(src) {
         Ok(root) => {
-            unsafe { *ppexpr = Box::leak(Box::new(root)) as *mut OmlExpr as *mut c_void };
+            unsafe { *ppexpr = Box::leak(Box::new(root)) as *mut FamlExpr as *mut c_void };
             unsafe { *pperr = std::ptr::null_mut() };
             true.as_cint()
         }
@@ -38,65 +34,65 @@ pub extern "C" fn oml_expr_from_str(
     }
 }
 
-#[no_mangle]
-pub extern "C" fn oml_expr_set_none(pexpr: *mut c_void, ppath: *const c_char) {
-    let mut expr = unsafe { Box::from_raw(pexpr as *mut OmlExpr) };
+#[unsafe(no_mangle)]
+pub extern "C" fn faml_expr_set_none(pexpr: *mut c_void, ppath: *const c_char) {
+    let mut expr = unsafe { Box::from_raw(pexpr as *mut FamlExpr) };
     let path = unsafe { CStr::from_ptr(ppath).to_str().unwrap_or("") };
-    expr[path] = OmlExpr::None;
+    expr[path] = FamlExpr::None;
     Box::leak(expr);
 }
 
-#[no_mangle]
-pub extern "C" fn oml_expr_set_bool(pexpr: *mut c_void, ppath: *const c_char, value: c_int) {
-    let mut expr = unsafe { Box::from_raw(pexpr as *mut OmlExpr) };
+#[unsafe(no_mangle)]
+pub extern "C" fn faml_expr_set_bool(pexpr: *mut c_void, ppath: *const c_char, value: c_int) {
+    let mut expr = unsafe { Box::from_raw(pexpr as *mut FamlExpr) };
     let path = unsafe { CStr::from_ptr(ppath).to_str().unwrap_or("") };
-    expr[path] = OmlExpr::Value(OmlValue::Bool(value != 0));
+    expr[path] = FamlExpr::Value(FamlValue::Bool(value != 0));
     Box::leak(expr);
 }
 
-#[no_mangle]
-pub extern "C" fn oml_expr_set_int(pexpr: *mut c_void, ppath: *const c_char, value: c_longlong) {
-    let mut expr = unsafe { Box::from_raw(pexpr as *mut OmlExpr) };
+#[unsafe(no_mangle)]
+pub extern "C" fn faml_expr_set_int(pexpr: *mut c_void, ppath: *const c_char, value: c_longlong) {
+    let mut expr = unsafe { Box::from_raw(pexpr as *mut FamlExpr) };
     let path = unsafe { CStr::from_ptr(ppath).to_str().unwrap_or("") };
-    expr[path] = OmlExpr::Value(OmlValue::Int64(value));
+    expr[path] = FamlExpr::Value(FamlValue::Int64(value));
     Box::leak(expr);
 }
 
-#[no_mangle]
-pub extern "C" fn oml_expr_set_float(pexpr: *mut c_void, ppath: *const c_char, value: c_double) {
-    let mut expr = unsafe { Box::from_raw(pexpr as *mut OmlExpr) };
+#[unsafe(no_mangle)]
+pub extern "C" fn faml_expr_set_float(pexpr: *mut c_void, ppath: *const c_char, value: c_double) {
+    let mut expr = unsafe { Box::from_raw(pexpr as *mut FamlExpr) };
     let path = unsafe { CStr::from_ptr(ppath).to_str().unwrap_or("") };
-    expr[path] = OmlExpr::Value(OmlValue::Float64(value));
+    expr[path] = FamlExpr::Value(FamlValue::Float64(value));
     Box::leak(expr);
 }
 
-#[no_mangle]
-pub extern "C" fn oml_expr_set_string(
+#[unsafe(no_mangle)]
+pub extern "C" fn faml_expr_set_string(
     pexpr: *mut c_void,
     ppath: *const c_char,
     pvalue: *const c_char,
 ) {
-    let mut expr = unsafe { Box::from_raw(pexpr as *mut OmlExpr) };
+    let mut expr = unsafe { Box::from_raw(pexpr as *mut FamlExpr) };
     let path = unsafe { CStr::from_ptr(ppath).to_str().unwrap_or("") };
     let value = unsafe { CStr::from_ptr(pvalue).to_str().unwrap_or("") }.to_string();
-    expr[path] = OmlExpr::Value(OmlValue::String(value));
+    expr[path] = FamlExpr::Value(FamlValue::String(value));
     Box::leak(expr);
 }
 
-#[no_mangle]
-pub extern "C" fn oml_expr_evalute(
+#[unsafe(no_mangle)]
+pub extern "C" fn faml_expr_evalute(
     pexpr: *mut c_void,
     ppath: *const c_char,
     ppval: *mut *mut c_void,
     pperr: *mut *const c_char,
 ) -> c_int {
-    let expr = unsafe { Box::from_raw(pexpr as *mut OmlExpr) };
+    let expr = unsafe { Box::from_raw(pexpr as *mut FamlExpr) };
     let path = unsafe { CStr::from_ptr(ppath).to_str().unwrap_or("") };
     let a = &expr[path];
     let b = a.evalute();
     let ret = match b {
         Ok(root) => {
-            unsafe { *ppval = Box::leak(Box::new(root)) as *mut OmlValue as *mut c_void };
+            unsafe { *ppval = Box::leak(Box::new(root)) as *mut FamlValue as *mut c_void };
             unsafe { *pperr = std::ptr::null_mut() };
             true
         }
@@ -110,9 +106,9 @@ pub extern "C" fn oml_expr_evalute(
     ret.as_cint()
 }
 
-#[no_mangle]
-pub extern "C" fn oml_value_is_none(pval: *mut c_void, ppath: *const c_char) -> c_int {
-    let val = unsafe { Box::from_raw(pval as *mut OmlValue) };
+#[unsafe(no_mangle)]
+pub extern "C" fn faml_value_is_none(pval: *mut c_void, ppath: *const c_char) -> c_int {
+    let val = unsafe { Box::from_raw(pval as *mut FamlValue) };
     let path = unsafe { CStr::from_ptr(ppath).to_str().unwrap_or("") };
     let ret = val
         .get_with_path(path)
@@ -122,9 +118,9 @@ pub extern "C" fn oml_value_is_none(pval: *mut c_void, ppath: *const c_char) -> 
     ret.as_cint()
 }
 
-#[no_mangle]
-pub extern "C" fn oml_value_is_bool(pval: *mut c_void, ppath: *const c_char) -> c_int {
-    let val = unsafe { Box::from_raw(pval as *mut OmlValue) };
+#[unsafe(no_mangle)]
+pub extern "C" fn faml_value_is_bool(pval: *mut c_void, ppath: *const c_char) -> c_int {
+    let val = unsafe { Box::from_raw(pval as *mut FamlValue) };
     let path = unsafe { CStr::from_ptr(ppath).to_str().unwrap_or("") };
     let ret = val
         .get_with_path(path)
@@ -134,9 +130,9 @@ pub extern "C" fn oml_value_is_bool(pval: *mut c_void, ppath: *const c_char) -> 
     ret.as_cint()
 }
 
-#[no_mangle]
-pub extern "C" fn oml_value_as_bool(pval: *mut c_void, ppath: *const c_char) -> c_int {
-    let val = unsafe { Box::from_raw(pval as *mut OmlValue) };
+#[unsafe(no_mangle)]
+pub extern "C" fn faml_value_as_bool(pval: *mut c_void, ppath: *const c_char) -> c_int {
+    let val = unsafe { Box::from_raw(pval as *mut FamlValue) };
     let path = unsafe { CStr::from_ptr(ppath).to_str().unwrap_or("") };
     let ret = val
         .get_with_path(path)
@@ -147,18 +143,18 @@ pub extern "C" fn oml_value_as_bool(pval: *mut c_void, ppath: *const c_char) -> 
     ret.as_cint()
 }
 
-#[no_mangle]
-pub extern "C" fn oml_value_is_int(pval: *mut c_void, ppath: *const c_char) -> c_int {
-    let val = unsafe { Box::from_raw(pval as *mut OmlValue) };
+#[unsafe(no_mangle)]
+pub extern "C" fn faml_value_is_int(pval: *mut c_void, ppath: *const c_char) -> c_int {
+    let val = unsafe { Box::from_raw(pval as *mut FamlValue) };
     let path = unsafe { CStr::from_ptr(ppath).to_str().unwrap_or("") };
     let ret = val.get_with_path(path).map(|a| a.is_int()).unwrap_or(false);
     Box::leak(val);
     ret.as_cint()
 }
 
-#[no_mangle]
-pub extern "C" fn oml_value_as_int(pval: *mut c_void, ppath: *const c_char) -> c_longlong {
-    let val = unsafe { Box::from_raw(pval as *mut OmlValue) };
+#[unsafe(no_mangle)]
+pub extern "C" fn faml_value_as_int(pval: *mut c_void, ppath: *const c_char) -> c_longlong {
+    let val = unsafe { Box::from_raw(pval as *mut FamlValue) };
     let path = unsafe { CStr::from_ptr(ppath).to_str().unwrap_or("") };
     let ret = val
         .get_with_path(path)
@@ -169,9 +165,9 @@ pub extern "C" fn oml_value_as_int(pval: *mut c_void, ppath: *const c_char) -> c
     ret
 }
 
-#[no_mangle]
-pub extern "C" fn oml_value_is_float(pval: *mut c_void, ppath: *const c_char) -> c_int {
-    let val = unsafe { Box::from_raw(pval as *mut OmlValue) };
+#[unsafe(no_mangle)]
+pub extern "C" fn faml_value_is_float(pval: *mut c_void, ppath: *const c_char) -> c_int {
+    let val = unsafe { Box::from_raw(pval as *mut FamlValue) };
     let path = unsafe { CStr::from_ptr(ppath).to_str().unwrap_or("") };
     let ret = val
         .get_with_path(path)
@@ -181,9 +177,9 @@ pub extern "C" fn oml_value_is_float(pval: *mut c_void, ppath: *const c_char) ->
     ret.as_cint()
 }
 
-#[no_mangle]
-pub extern "C" fn oml_value_as_float(pval: *mut c_void, ppath: *const c_char) -> c_double {
-    let val = unsafe { Box::from_raw(pval as *mut OmlValue) };
+#[unsafe(no_mangle)]
+pub extern "C" fn faml_value_as_float(pval: *mut c_void, ppath: *const c_char) -> c_double {
+    let val = unsafe { Box::from_raw(pval as *mut FamlValue) };
     let path = unsafe { CStr::from_ptr(ppath).to_str().unwrap_or("") };
     let ret = val
         .get_with_path(path)
@@ -194,18 +190,18 @@ pub extern "C" fn oml_value_as_float(pval: *mut c_void, ppath: *const c_char) ->
     ret
 }
 
-#[no_mangle]
-pub extern "C" fn oml_value_is_str(pval: *mut c_void, ppath: *const c_char) -> c_int {
-    let val = unsafe { Box::from_raw(pval as *mut OmlValue) };
+#[unsafe(no_mangle)]
+pub extern "C" fn faml_value_is_str(pval: *mut c_void, ppath: *const c_char) -> c_int {
+    let val = unsafe { Box::from_raw(pval as *mut FamlValue) };
     let path = unsafe { CStr::from_ptr(ppath).to_str().unwrap_or("") };
     let ret = val.get_with_path(path).map(|a| a.is_str()).unwrap_or(false);
     Box::leak(val);
     ret.as_cint()
 }
 
-#[no_mangle]
-pub extern "C" fn oml_value_as_str(pval: *mut c_void, ppath: *const c_char) -> *const c_char {
-    let val = unsafe { Box::from_raw(pval as *mut OmlValue) };
+#[unsafe(no_mangle)]
+pub extern "C" fn faml_value_as_str(pval: *mut c_void, ppath: *const c_char) -> *const c_char {
+    let val = unsafe { Box::from_raw(pval as *mut FamlValue) };
     let path = unsafe { CStr::from_ptr(ppath).to_str().unwrap_or("") };
     let ret = val
         .get_with_path(path)
@@ -216,9 +212,9 @@ pub extern "C" fn oml_value_as_str(pval: *mut c_void, ppath: *const c_char) -> *
     ret
 }
 
-#[no_mangle]
-pub extern "C" fn oml_value_is_array(pval: *mut c_void, ppath: *const c_char) -> c_int {
-    let val = unsafe { Box::from_raw(pval as *mut OmlValue) };
+#[unsafe(no_mangle)]
+pub extern "C" fn faml_value_is_array(pval: *mut c_void, ppath: *const c_char) -> c_int {
+    let val = unsafe { Box::from_raw(pval as *mut FamlValue) };
     let path = unsafe { CStr::from_ptr(ppath).to_str().unwrap_or("") };
     let ret = val
         .get_with_path(path)
@@ -228,9 +224,9 @@ pub extern "C" fn oml_value_is_array(pval: *mut c_void, ppath: *const c_char) ->
     ret.as_cint()
 }
 
-#[no_mangle]
-pub extern "C" fn oml_value_get_array_length(pval: *mut c_void, ppath: *const c_char) -> c_int {
-    let val = unsafe { Box::from_raw(pval as *mut OmlValue) };
+#[unsafe(no_mangle)]
+pub extern "C" fn faml_value_get_array_length(pval: *mut c_void, ppath: *const c_char) -> c_int {
+    let val = unsafe { Box::from_raw(pval as *mut FamlValue) };
     let path = unsafe { CStr::from_ptr(ppath).to_str().unwrap_or("") };
     let ret = val
         .get_with_path(path)
@@ -241,18 +237,18 @@ pub extern "C" fn oml_value_get_array_length(pval: *mut c_void, ppath: *const c_
     ret as c_int
 }
 
-#[no_mangle]
-pub extern "C" fn oml_value_is_map(pval: *mut c_void, ppath: *const c_char) -> c_int {
-    let val = unsafe { Box::from_raw(pval as *mut OmlValue) };
+#[unsafe(no_mangle)]
+pub extern "C" fn faml_value_is_map(pval: *mut c_void, ppath: *const c_char) -> c_int {
+    let val = unsafe { Box::from_raw(pval as *mut FamlValue) };
     let path = unsafe { CStr::from_ptr(ppath).to_str().unwrap_or("") };
     let ret = val.get_with_path(path).map(|a| a.is_map()).unwrap_or(false);
     Box::leak(val);
     ret.as_cint()
 }
 
-#[no_mangle]
-pub extern "C" fn oml_value_get_map_length(pval: *mut c_void, ppath: *const c_char) -> c_int {
-    let val = unsafe { Box::from_raw(pval as *mut OmlValue) };
+#[unsafe(no_mangle)]
+pub extern "C" fn faml_value_get_map_length(pval: *mut c_void, ppath: *const c_char) -> c_int {
+    let val = unsafe { Box::from_raw(pval as *mut FamlValue) };
     let path = unsafe { CStr::from_ptr(ppath).to_str().unwrap_or("") };
     let ret = val
         .get_with_path(path)
@@ -263,9 +259,9 @@ pub extern "C" fn oml_value_get_map_length(pval: *mut c_void, ppath: *const c_ch
     ret as c_int
 }
 
-#[no_mangle]
-pub extern "C" fn oml_value_get_keys(pval: *mut c_void, ppath: *const c_char) -> *const c_char {
-    let val = unsafe { Box::from_raw(pval as *mut OmlValue) };
+#[unsafe(no_mangle)]
+pub extern "C" fn faml_value_get_keys(pval: *mut c_void, ppath: *const c_char) -> *const c_char {
+    let val = unsafe { Box::from_raw(pval as *mut FamlValue) };
     let path = unsafe { CStr::from_ptr(ppath).to_str().unwrap_or("") };
     let ret = val
         .get_with_path(path)
@@ -282,71 +278,71 @@ pub extern "C" fn oml_value_get_keys(pval: *mut c_void, ppath: *const c_char) ->
     ret
 }
 
-#[no_mangle]
-pub extern "C" fn oml_value_set_none(pval: *mut c_void, ppath: *const c_char) -> c_int {
-    let mut val = unsafe { Box::from_raw(pval as *mut OmlValue) };
+#[unsafe(no_mangle)]
+pub extern "C" fn faml_value_set_none(pval: *mut c_void, ppath: *const c_char) -> c_int {
+    let mut val = unsafe { Box::from_raw(pval as *mut FamlValue) };
     let path = unsafe { CStr::from_ptr(ppath).to_str().unwrap_or("") };
     val.get_with_path_mut(path)
-        .map(|a| *a = OmlValue::None)
+        .map(|a| *a = FamlValue::None)
         .is_some()
         .as_cint()
 }
 
-#[no_mangle]
-pub extern "C" fn oml_value_set_bool(pval: *mut c_void, ppath: *const c_char, value: c_int) {
-    let mut val = unsafe { Box::from_raw(pval as *mut OmlValue) };
+#[unsafe(no_mangle)]
+pub extern "C" fn faml_value_set_bool(pval: *mut c_void, ppath: *const c_char, value: c_int) {
+    let mut val = unsafe { Box::from_raw(pval as *mut FamlValue) };
     let path = unsafe { CStr::from_ptr(ppath).to_str().unwrap_or("") };
     val.get_with_path_mut(path)
-        .map(|a| *a = OmlValue::Bool(value != 0));
+        .map(|a| *a = FamlValue::Bool(value != 0));
 }
 
-#[no_mangle]
-pub extern "C" fn oml_value_set_int(pval: *mut c_void, ppath: *const c_char, value: c_longlong) {
-    let mut val = unsafe { Box::from_raw(pval as *mut OmlValue) };
+#[unsafe(no_mangle)]
+pub extern "C" fn faml_value_set_int(pval: *mut c_void, ppath: *const c_char, value: c_longlong) {
+    let mut val = unsafe { Box::from_raw(pval as *mut FamlValue) };
     let path = unsafe { CStr::from_ptr(ppath).to_str().unwrap_or("") };
     val.get_with_path_mut(path)
-        .map(|a| *a = OmlValue::Int64(value));
+        .map(|a| *a = FamlValue::Int64(value));
 }
 
-#[no_mangle]
-pub extern "C" fn oml_value_set_float(pval: *mut c_void, ppath: *const c_char, value: c_double) {
-    let mut val = unsafe { Box::from_raw(pval as *mut OmlValue) };
+#[unsafe(no_mangle)]
+pub extern "C" fn faml_value_set_float(pval: *mut c_void, ppath: *const c_char, value: c_double) {
+    let mut val = unsafe { Box::from_raw(pval as *mut FamlValue) };
     let path = unsafe { CStr::from_ptr(ppath).to_str().unwrap_or("") };
     val.get_with_path_mut(path)
-        .map(|a| *a = OmlValue::Float64(value));
+        .map(|a| *a = FamlValue::Float64(value));
 }
 
-#[no_mangle]
-pub extern "C" fn oml_value_set_string(
+#[unsafe(no_mangle)]
+pub extern "C" fn faml_value_set_string(
     pval: *mut c_void,
     ppath: *const c_char,
     pvalue: *const c_char,
 ) -> c_int {
-    let mut val = unsafe { Box::from_raw(pval as *mut OmlValue) };
+    let mut val = unsafe { Box::from_raw(pval as *mut FamlValue) };
     let path = unsafe { CStr::from_ptr(ppath).to_str().unwrap_or("") };
     let value = unsafe { CStr::from_ptr(pvalue).to_str().unwrap_or("") }.to_string();
     val.get_with_path_mut(path)
-        .map(|a| *a = OmlValue::String(value))
+        .map(|a| *a = FamlValue::String(value))
         .is_some()
         .as_cint()
 }
 
-#[no_mangle]
-pub extern "C" fn oml_release_expr(pexpr: *const c_void) {
+#[unsafe(no_mangle)]
+pub extern "C" fn faml_release_expr(pexpr: *const c_void) {
     if !pexpr.is_null() {
-        _ = unsafe { Box::from_raw(pexpr as *mut OmlExpr) };
+        _ = unsafe { Box::from_raw(pexpr as *mut FamlExpr) };
     }
 }
 
-#[no_mangle]
-pub extern "C" fn oml_release_value(pval: *const c_void) {
+#[unsafe(no_mangle)]
+pub extern "C" fn faml_release_value(pval: *const c_void) {
     if !pval.is_null() {
-        _ = unsafe { Box::from_raw(pval as *mut OmlValue) };
+        _ = unsafe { Box::from_raw(pval as *mut FamlValue) };
     }
 }
 
-#[no_mangle]
-pub extern "C" fn oml_release_str(pstr: *const c_char) {
+#[unsafe(no_mangle)]
+pub extern "C" fn faml_release_str(pstr: *const c_char) {
     if !pstr.is_null() {
         _ = unsafe { CString::from_raw(pstr as *mut c_char) };
     }

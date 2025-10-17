@@ -1,20 +1,20 @@
 [package]
-name = "oml"
+name = "faml"
 version = "0.1.2"
-edition = "2021"
-rust-version = "1.74"
+edition = "2024"
+rust-version = "1.90"
 license = "MIT"
-repository = "https://github.com/fawdlstty/oml"
-homepage = "https://github.com/fawdlstty/oml"
+repository = "https://github.com/fawdlstty/faml"
+homepage = "https://github.com/fawdlstty/faml"
 description = "Open Markup Language!"
-keywords = ["oml", "markup", "configuration"]
+keywords = ["faml", "markup", "configuration"]
 categories = []
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
-name = "oml"
-crate-type = ["staticlib", "dylib", "lib"]
+name = "faml"
+crate-type = ["dylib", "lib"]
 
 [dependencies]
 anyhow = "1.0.98"
@@ -24,7 +24,9 @@ serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
 
 [build-dependencies]
-cbindgen = "0.27.0"
+cbindgen = "0.29.0"
 
 [features]
 default = []
+
+# cargo publish --allow-dirty --registry crates-io

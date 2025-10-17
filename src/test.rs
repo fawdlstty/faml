@@ -1,13 +1,13 @@
-use crate::OmlExpr;
+use crate::FamlExpr;
 
 #[test]
 fn test1() {
-    let oml_str = r#"
+    let faml_str = r#"
 [hello]
 value = 12
 name = $"hello world {value + 12}"
 "#;
-    let mut root = match OmlExpr::from_str(oml_str) {
+    let mut root = match FamlExpr::from_str(faml_str) {
         Ok(root) => root,
         Err(err) => panic!("Error: {}", err),
     };

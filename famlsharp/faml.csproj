@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <PackageId>oml</PackageId>
+    <PackageId>faml</PackageId>
     <Version>0.0.7</Version>
     <Authors>fawdlstty</Authors>
     <Company>fa-org</Company>
@@ -10,7 +10,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <AssemblyName>oml</AssemblyName>
+    <AssemblyName>faml</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,10 +18,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="libs\oml.x86_64_win.dll">
+    <None Update="libs\faml.x86_64_win.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="libs\liboml.x86_64_linux.so">
+    <None Update="libs\libfaml.x86_64_linux.so">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
