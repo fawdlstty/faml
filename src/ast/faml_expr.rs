@@ -439,12 +439,19 @@ impl FamlExpr {
     }
 
     fn parse_ids(root: pest::iterators::Pair<'_, Rule>) -> String {
-        let root_item = root.into_inner().next().unwrap();
-        match root_item.as_rule() {
-            Rule::ids => root_item.as_str().to_string(),
-            Rule::id => root_item.as_str().to_string(),
-            _ => unreachable!(),
+        let mut s = "".to_string();
+        for root_item in root.into_inner() {
+            let tmp = match root_item.as_rule() {
+                Rule::ids => root_item.as_str(),
+                Rule::id => root_item.as_str(),
+                _ => unreachable!(),
+            };
+            match s.is_empty() {
+                true => s = tmp.to_string(),
+                false => s = format!("{s}.{tmp}"),
+            }
         }
+        s
     }
 
     pub fn root_evalute(&self, path: &str) -> anyhow::Result<FamlValue> {
@@ -682,14 +689,19 @@ pub(crate) trait PathAppendExt {
 
 impl PathAppendExt for str {
     fn append_str(&self, name: &str) -> String {
-        match name {
-            "root" => "".to_string(),
-            "super" => self.remove_once().to_string(),
-            _ => match self.is_empty() {
-                true => name.to_string(),
-                false => format!("{self}.{name}"),
-            },
+        let names: Vec<_> = name.split('.').collect();
+        let mut ret = self.to_string();
+        for name in names {
+            ret = match name {
+                "base" => "".to_string(),
+                "super" => ret.remove_once().remove_once().to_string(),
+                _ => match ret.is_empty() {
+                    true => name.to_string(),
+                    false => format!("{ret}.{name}"),
+                },
+            };
         }
+        ret
     }
 
     fn append_num(&self, num: usize) -> String {
