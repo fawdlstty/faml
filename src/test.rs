@@ -1,4 +1,4 @@
-use crate::FamlExpr;
+use crate::FamlExprBase;
 
 #[test]
 fn test1() -> anyhow::Result<()> {
@@ -7,7 +7,7 @@ fn test1() -> anyhow::Result<()> {
 value = 12
 name = $"hello world {value + 12}"
 "#;
-    let mut root = FamlExpr::from_str(faml_str)?;
+    let mut root = FamlExprBase::from_str(faml_str)?;
     root["hello"]["value"].set_int(30);
     let root = root.evalute()?;
     assert_eq!(root["hello"]["name"].as_str(), "hello world 42");

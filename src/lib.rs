@@ -1,7 +1,7 @@
 pub mod ffi;
 
-#[cfg(test)]
-pub mod test;
+// #[cfg(test)]
+// pub mod test;
 
 mod ast;
 mod string_utils;

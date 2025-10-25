@@ -1,3 +1,4 @@
+use crate::ast::faml_expr::FamlExprImpl;
 use crate::{FamlExpr, FamlValue};
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_double, c_int, c_longlong, c_void};
@@ -38,7 +39,7 @@ pub extern "C" fn faml_expr_from_str(
 pub extern "C" fn faml_expr_set_none(pexpr: *mut c_void, ppath: *const c_char) {
     let mut expr = unsafe { Box::from_raw(pexpr as *mut FamlExpr) };
     let path = unsafe { CStr::from_ptr(ppath).to_str().unwrap_or("") };
-    expr[path] = FamlExpr::None;
+    expr[path] = FamlExprImpl::None.to_expr();
     Box::leak(expr);
 }
 
@@ -46,7 +47,7 @@ pub extern "C" fn faml_expr_set_none(pexpr: *mut c_void, ppath: *const c_char) {
 pub extern "C" fn faml_expr_set_bool(pexpr: *mut c_void, ppath: *const c_char, value: c_int) {
     let mut expr = unsafe { Box::from_raw(pexpr as *mut FamlExpr) };
     let path = unsafe { CStr::from_ptr(ppath).to_str().unwrap_or("") };
-    expr[path] = FamlExpr::Value(FamlValue::Bool(value != 0));
+    expr[path] = FamlExprImpl::Value(FamlValue::Bool(value != 0)).to_expr();
     Box::leak(expr);
 }
 
@@ -54,7 +55,7 @@ pub extern "C" fn faml_expr_set_bool(pexpr: *mut c_void, ppath: *const c_char, v
 pub extern "C" fn faml_expr_set_int(pexpr: *mut c_void, ppath: *const c_char, value: c_longlong) {
     let mut expr = unsafe { Box::from_raw(pexpr as *mut FamlExpr) };
     let path = unsafe { CStr::from_ptr(ppath).to_str().unwrap_or("") };
-    expr[path] = FamlExpr::Value(FamlValue::Int64(value));
+    expr[path] = FamlExprImpl::Value(FamlValue::Int64(value)).to_expr();
     Box::leak(expr);
 }
 
@@ -62,7 +63,7 @@ pub extern "C" fn faml_expr_set_int(pexpr: *mut c_void, ppath: *const c_char, va
 pub extern "C" fn faml_expr_set_float(pexpr: *mut c_void, ppath: *const c_char, value: c_double) {
     let mut expr = unsafe { Box::from_raw(pexpr as *mut FamlExpr) };
     let path = unsafe { CStr::from_ptr(ppath).to_str().unwrap_or("") };
-    expr[path] = FamlExpr::Value(FamlValue::Float64(value));
+    expr[path] = FamlExprImpl::Value(FamlValue::Float64(value)).to_expr();
     Box::leak(expr);
 }
 
@@ -75,7 +76,7 @@ pub extern "C" fn faml_expr_set_string(
     let mut expr = unsafe { Box::from_raw(pexpr as *mut FamlExpr) };
     let path = unsafe { CStr::from_ptr(ppath).to_str().unwrap_or("") };
     let value = unsafe { CStr::from_ptr(pvalue).to_str().unwrap_or("") }.to_string();
-    expr[path] = FamlExpr::Value(FamlValue::String(value));
+    expr[path] = FamlExprImpl::Value(FamlValue::String(value)).to_expr();
     Box::leak(expr);
 }
 
