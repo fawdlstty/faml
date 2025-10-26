@@ -9,10 +9,11 @@ homepage = "https://github.com/fawdlstty/faml"
 description = "Minimalist and powerful dynamic markup language"
 keywords = ["faml", "markup", "configuration"]
 categories = []
+publish = true
 
 [lib]
 name = "faml"
-crate-type = ["rlib"] # , "cdylib", "staticlib"
+crate-type = ["rlib"]
 
 [dependencies]
 anyhow = "1.0.98"

@@ -5,4 +5,7 @@ members = ["faml", "famllib"]
 
 [workspace.dependencies]
 
-# cargo publish -p faml --allow-dirty --registry crates-io
+[workspace.package]
+publish = false
+
+# cargo publish --allow-dirty --registry crates-io

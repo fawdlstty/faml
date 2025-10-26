@@ -16,7 +16,3 @@ Cargo.lock
 
 # vscode config file
 .vscode/
-
-# personal test file
-src/main.rs
-build.bat
