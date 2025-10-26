@@ -59,7 +59,7 @@ pub enum FamlExprImpl {
     Op3((FamlExpr, FamlExpr, FamlExpr)),
     FormatString((Vec<String>, Vec<FamlExpr>)),
     AccessVar((FamlExpr, String)),
-    InvokeFunc((FamlExpr, String, Vec<FamlExpr>)),
+    InvokeFunc((FamlExpr, Vec<FamlExpr>)),
     IfAnno(FamlExprIfAnno),
 }
 
@@ -487,7 +487,7 @@ impl FamlExpr {
     fn parse_middle_expr(root: pest::iterators::Pair<'_, Rule>) -> Self {
         enum SuffixOp {
             AccessVar(String),
-            InvokeFunc((String, Vec<FamlExpr>)),
+            InvokeFunc(Vec<FamlExpr>),
             Op(String),
         }
         impl SuffixOp {
@@ -512,9 +512,11 @@ impl FamlExpr {
                     }
                 }
                 if id.is_empty() {
-                    SuffixOp::Op(root_str.to_string())
-                } else if let Some(args) = args {
-                    SuffixOp::InvokeFunc((id, args))
+                    if let Some(args) = args {
+                        SuffixOp::InvokeFunc(args)
+                    } else {
+                        SuffixOp::Op(root_str.to_string())
+                    }
                 } else {
                     SuffixOp::AccessVar(id)
                 }
@@ -532,14 +534,13 @@ impl FamlExpr {
                 _ => unreachable!(),
             }
         }
-        while !prefix_ops.is_empty() {
-            let prefix_op = prefix_ops.remove(prefix_ops.len());
+        while let Some(prefix_op) = prefix_ops.pop() {
             expr = FamlExprImpl::Op1Prefix((prefix_op, expr)).to_expr();
         }
         while !suffix_ops.is_empty() {
             expr = match suffix_ops.remove(0) {
                 SuffixOp::AccessVar(name) => FamlExprImpl::AccessVar((expr, name)),
-                SuffixOp::InvokeFunc((name, args)) => FamlExprImpl::InvokeFunc((expr, name, args)),
+                SuffixOp::InvokeFunc(args) => FamlExprImpl::InvokeFunc((expr, args)),
                 SuffixOp::Op(suffix_op) => FamlExprImpl::Op1Suffix((expr, suffix_op)),
             }
             .to_expr();
@@ -743,21 +744,10 @@ impl FamlExpr {
                     _ => self.base().super_expr.upgrade()?,
                 };
                 for name in names {
-                    expr = match &mut expr.base_mut().expr {
-                        FamlExprImpl::Array(arr) if name.starts_with('[') => {
-                            let idx = name[1..name.len() - 1]
-                                .parse::<usize>()
-                                .map_err(|_| anyhow!("invalid index"))?;
-                            arr.get(idx)
-                                .ok_or_else(|| anyhow!("index out of range"))?
-                                .clone()
-                        }
-                        FamlExprImpl::Map(map) if !name.starts_with('[') => map
-                            .get(name)
-                            .ok_or_else(|| anyhow!("node has no field3[{name}]"))?
-                            .clone(),
-                        _ => Err(anyhow!("node has no field4[{name}]"))?,
-                    };
+                    expr = expr
+                        .get(name)
+                        .ok_or_else(|| anyhow!("node has no field1[{name}]"))?
+                        .clone();
                 }
                 expr.evalute()
             }
@@ -792,14 +782,28 @@ impl FamlExpr {
                 }
                 Ok(FamlValue::String(ret))
             }
-            FamlExprImpl::AccessVar((expr, name)) => match &expr.base().expr {
-                FamlExprImpl::Map(map) => map
-                    .get(name)
-                    .ok_or_else(|| anyhow!("node has no field5[{name}]"))?
-                    .evalute(),
-                _ => Err(anyhow!("node has no field6[{name}]"))?,
+            FamlExprImpl::AccessVar((expr, name)) => expr
+                .get(&name)
+                .ok_or_else(|| anyhow!("node has no field2[{name}]"))?
+                .evalute(),
+            FamlExprImpl::InvokeFunc((expr, args)) => match &expr.base().expr {
+                FamlExprImpl::TempName(names) => {
+                    let mut names = names.clone();
+                    let func = names.pop().ok_or_else(|| anyhow!("func name expected"))?;
+                    let mut obj_val = {
+                        let mut obj_expr = FamlExprImpl::TempName(names).to_expr();
+                        obj_expr.base_mut().base_expr = expr.base().base_expr.clone();
+                        obj_expr.base_mut().super_expr = expr.base().super_expr.clone();
+                        obj_expr.evalute()?
+                    };
+                    let mut arg_vals = vec![];
+                    for arg in args {
+                        arg_vals.push(arg.evalute()?);
+                    }
+                    obj_val.invoke(&func, &arg_vals)
+                }
+                _ => Err(anyhow!("unsupported invoke type"))?,
             },
-            FamlExprImpl::InvokeFunc(_) => todo!(),
             FamlExprImpl::IfAnno(if_anno) => todo!(),
         }
     }
@@ -867,10 +871,10 @@ impl FamlExprBase {
             FamlExprImpl::AccessVar((expr, _)) => {
                 expr.init_weak_expr(base_expr.clone(), super_expr.clone());
             }
-            FamlExprImpl::InvokeFunc((expr, _, exprs)) => {
+            FamlExprImpl::InvokeFunc((expr, args)) => {
                 expr.init_weak_expr(base_expr.clone(), super_expr.clone());
-                for expr in exprs {
-                    expr.init_weak_expr(base_expr.clone(), super_expr.clone());
+                for arg in args {
+                    arg.init_weak_expr(base_expr.clone(), super_expr.clone());
                 }
             }
             FamlExprImpl::IfAnno(if_anno) => {
