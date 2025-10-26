@@ -5,7 +5,7 @@
 
 [English](README.md) | 简体中文
 
-Open Markup Language! 一款动态配置脚本语言，可在配置文件里嵌入脚本代码，实现动态更新配置。
+Faml 是一款动态配置脚本语言，可在配置文件里嵌入脚本代码，实现动态更新配置。
 
 ## 用户手册
 
@@ -34,7 +34,9 @@ name = $"hello {value + 12}"
 ```shell
 git clone git@github.com:fawdlstty/faml.git
 cd faml
-cargo build --release --lib # debug: cargo build --lib
+# 构建支持C API的版本
+cargo build --release --target x86_64-pc-windows-msvc
+cargo build --release --target x86_64-unknown-linux-gnu
 ```
 
 此时静态库（或动态库）位于 `target/release` 目录下。将其拷贝至C++项目，并引用

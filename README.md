@@ -5,7 +5,7 @@
 
 English | [简体中文](README.zh_CN.md)
 
-Open Markup Language! A dynamic configuration scripting language that can embed script code in the configuration file to achieve dynamic configuration update.
+Faml is a dynamic configuration scripting language that can embed script code in the configuration file to achieve dynamic configuration update.
 
 ## Manual
 
@@ -34,7 +34,9 @@ Download and compile static libraries (or dynamic libraries)
 ```shell
 git clone git@github.com:fawdlstty/faml.git
 cd faml
-cargo build --release --lib # debug: cargo build --lib
+# Build with C API support
+cargo build --release --target x86_64-pc-windows-msvc
+cargo build --release --target x86_64-unknown-linux-gnu
 ```
 
 The static library (or dynamic library) is generated in the `target/release` directory. Copy it to the C++ project and reference it

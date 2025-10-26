@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <PackageId>faml</PackageId>
-    <Version>0.0.7</Version>
+    <Version>0.1.3</Version>
     <Authors>fawdlstty</Authors>
     <Company>fa-org</Company>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>

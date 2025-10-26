@@ -1,6 +1,5 @@
-use std::path::PathBuf;
-
 fn main() {
+    use std::path::PathBuf;
     let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let config = cbindgen::Config {
         language: cbindgen::Language::C,
