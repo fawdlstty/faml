@@ -365,3 +365,33 @@ impl FamlValue {
         *self = FamlValue::String(val.into());
     }
 }
+
+impl Into<FamlValue> for () {
+    fn into(self) -> FamlValue {
+        FamlValue::None
+    }
+}
+
+impl Into<FamlValue> for bool {
+    fn into(self) -> FamlValue {
+        FamlValue::Bool(self)
+    }
+}
+
+impl Into<FamlValue> for i64 {
+    fn into(self) -> FamlValue {
+        FamlValue::Int64(self)
+    }
+}
+
+impl Into<FamlValue> for f64 {
+    fn into(self) -> FamlValue {
+        FamlValue::Float64(self)
+    }
+}
+
+impl Into<FamlValue> for String {
+    fn into(self) -> FamlValue {
+        FamlValue::String(self)
+    }
+}

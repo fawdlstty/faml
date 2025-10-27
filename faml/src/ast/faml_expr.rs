@@ -1,5 +1,6 @@
 use super::eval::{Op1Evaluator, Op2Evaluator};
 use super::faml_value::FamlValue;
+use crate::ast::invoke::InvokeExt;
 use crate::string_utils::IntoBaseExt;
 use anyhow::anyhow;
 use pest::Parser;
@@ -615,7 +616,10 @@ impl FamlExpr {
             Rule::boolean_literal => FamlValue::Bool(root_item.as_str() == "true"),
             Rule::number_literal => match root_item.as_str().parse::<i64>() {
                 Ok(n) => FamlValue::Int64(n),
-                Err(_) => FamlValue::String(root_item.as_str().into_base()),
+                Err(_) => match root_item.as_str().parse::<f64>() {
+                    Ok(f) => FamlValue::Float64(f),
+                    Err(_) => FamlValue::String(root_item.as_str().into_base()),
+                },
             },
             Rule::string_literal => FamlValue::String(root_item.as_str().into_base()),
             Rule::format_string_literal => return Self::parse_format_string_literal(root_item),
