@@ -14,16 +14,16 @@ Faml 是一款动态配置脚本语言，可在配置文件里嵌入脚本代码
 安装：在项目目录下运行 `cargo add faml`
 
 ```rust
-fn main() {
+fn main() -> anyhow::Result<()> {
     let faml_str = r#"
 [hello]
 value = 12
 name = $"hello {value + 12}"
 "#;
-    let mut eroot = FamlExpr::from_str(faml_str).unwrap();
-    eroot["hello"]["value"].set_int(30);
-    let root = eroot.evalute().unwrap();
-    println!("{}", root["hello"]["name"].as_str()); // hello 42
+    let mut root = faml::FamlExpr::from_str(faml_str)?;
+    root["hello"]["value"].set_int(30);
+    println!("{}", root["hello"]["name"].evalute()?.as_str()); // hello 42
+    Ok(())
 }
 ```
 

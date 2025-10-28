@@ -14,16 +14,16 @@ Faml is a dynamic configuration scripting language that can embed script code in
 Install: Run `cargo add faml` in the project directory
 
 ```rust
-fn main() {
+fn main() -> anyhow::Result<()> {
     let faml_str = r#"
 [hello]
 value = 12
 name = $"hello {value + 12}"
 "#;
-    let mut eroot = FamlExpr::from_str(faml_str).unwrap();
-    eroot["hello"]["value"].set_int(30);
-    let root = eroot.evalute().unwrap();
-    println!("{}", root["hello"]["name"].as_str()); // hello 42
+    let mut root = faml::FamlExpr::from_str(faml_str)?;
+    root["hello"]["value"].set_int(30);
+    println!("{}", root["hello"]["name"].evalute()?.as_str()); // hello 42
+    Ok(())
 }
 ```
 
