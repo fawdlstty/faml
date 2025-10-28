@@ -55,3 +55,36 @@ value3 = $"value1[{super.value1}], value2[{base.hello.value2}]"
     assert_eq!(value3, "value1[12], value2[13]");
     Ok(())
 }
+
+#[test]
+fn test4() -> anyhow::Result<()> {
+    let faml_str = r#"
+[hello]
+value1 = -12
+value2 = value1.abs()
+"#;
+    let root = FamlExpr::from_str(faml_str)?;
+    let value3 = root["hello"]["value2"].evalute()?.as_str();
+    assert_eq!(value3, "12");
+    Ok(())
+}
+
+#[test]
+fn test5() -> anyhow::Result<()> {
+    let faml_str = r#"
+        [hello]
+        value = 12
+    
+        @if value == 12
+        name = "hello world"
+    
+        @if value == 14
+        name = $"hello world {value}"
+    
+        "#;
+    let mut root = FamlExpr::from_str(faml_str)?;
+    root["hello"]["value"].set_int(14);
+    let name = root["hello"]["name"].evalute()?.as_str();
+    assert_eq!(name, "hello world 14");
+    Ok(())
+}

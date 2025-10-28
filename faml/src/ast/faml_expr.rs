@@ -808,7 +808,14 @@ impl FamlExpr {
                 }
                 _ => Err(anyhow!("unsupported invoke type"))?,
             },
-            FamlExprImpl::IfAnno(if_anno) => todo!(),
+            FamlExprImpl::IfAnno(if_anno) => {
+                for (cond, value) in &if_anno.ifcond_values {
+                    if cond.evalute()?.as_bool() == Some(true) {
+                        return value.evalute();
+                    }
+                }
+                return if_anno.default_value.evalute();
+            }
         }
     }
 

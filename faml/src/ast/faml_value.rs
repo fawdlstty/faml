@@ -93,6 +93,7 @@ impl FamlValue {
     pub fn as_float(&self) -> Option<f64> {
         match self {
             FamlValue::Float64(f) => Some(*f),
+            FamlValue::Int64(i) => Some(*i as f64),
             _ => None,
         }
     }

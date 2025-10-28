@@ -1,19 +1,18 @@
 [package]
 name = "faml"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2024"
 rust-version = "1.90"
 license = "MIT"
 repository = "https://github.com/fawdlstty/faml"
 homepage = "https://github.com/fawdlstty/faml"
 description = "Minimalist and powerful dynamic markup language"
+authors = ["fawdlstty<f@fawdlstty.com>"]
 keywords = ["faml", "markup", "configuration"]
 categories = []
+readme = "../README.md"
+exclude = ["src/main.rs"]
 publish = true
-
-[lib]
-name = "faml"
-crate-type = ["rlib"]
 
 [dependencies]
 anyhow = "1.0.98"
