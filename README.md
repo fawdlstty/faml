@@ -9,8 +9,6 @@ Faml is a dynamic configuration scripting language that can embed script code in
 
 ## Manual
 
-### rust
-
 Install: Run `cargo add faml` in the project directory
 
 ```rust
@@ -22,10 +20,12 @@ name = $"hello {value + 12}"
 "#;
     let mut root = faml::FamlExpr::from_str(faml_str)?;
     root["hello"]["value"].set_int(30);
-    println!("{}", root["hello"]["name"].evalute()?.as_str()); // hello 42
+    println!("{}", root["hello"]["name"].evaluate()?.as_str()); // hello 42
     Ok(())
 }
 ```
+
+<!--
 
 ### C++
 
@@ -66,7 +66,7 @@ name = $"hello {value + 12}"
     }
     auto eroot = std::get<faml::FamlExpr>(oeroot);
     eroot["hello"]["value"].set_int(30);
-    auto oroot = eroot.evalute();
+    auto oroot = eroot.evaluate();
     if (oroot.index() == 1) {
         std::cout << std::get<std::string>(oroot) << std::endl;
         return 0;
@@ -98,7 +98,7 @@ name = $"hello {value + 12}"
 """;
             var eroot = faml.FamlExpr.from_str (src);
             eroot ["hello"] ["value"].set_int (30);
-            var root = eroot.evalute ();
+            var root = eroot.evaluate ();
             Console.WriteLine (root ["hello"] ["name"].as_str()); // hello 42
             Console.ReadKey ();
         }
@@ -118,3 +118,5 @@ value = 12
 @if value == 12
 name = $"hello {value}"
 ```
+
+-->

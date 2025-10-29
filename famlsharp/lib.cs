@@ -52,11 +52,11 @@ public class FamlExpr : IDisposable
     public void set_float(double val) { FFI.faml_expr_set_float(pexpr, path, val); }
     public void set_string(string val) { FFI.faml_expr_set_string(pexpr, path, val); }
 
-    public FamlValue evalute()
+    public FamlValue evaluate()
     {
         IntPtr pval = 0;
         IntPtr perr = 0;
-        if (FFI.faml_expr_evalute(pexpr, path, out pval, out perr) > 0)
+        if (FFI.faml_expr_evaluate(pexpr, path, out pval, out perr) > 0)
         {
             return new FamlValue(pval);
         }

@@ -20,7 +20,7 @@ void faml_expr_set_float(void *pexpr, const char *ppath, double value);
 
 void faml_expr_set_string(void *pexpr, const char *ppath, const char *pvalue);
 
-int faml_expr_evalute(void *pexpr, const char *ppath, void **ppval, const char **pperr);
+int faml_expr_evaluate(void *pexpr, const char *ppath, void **ppval, const char **pperr);
 
 int faml_value_is_none(void *pval, const char *ppath);
 

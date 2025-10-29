@@ -9,7 +9,7 @@ name = $"hello world {value + 12}"
 "#;
     let mut root = FamlExpr::from_str(faml_str)?;
     root["hello"]["value"].set_int(30);
-    let root = root.evalute()?;
+    let root = root.evaluate()?;
     assert_eq!(root["hello"]["name"].as_str(), "hello world 42");
     Ok(())
 }
@@ -51,7 +51,7 @@ value2 = 13
 value3 = $"value1[{super.value1}], value2[{base.hello.value2}]"
 "#;
     let root = FamlExpr::from_str(faml_str)?;
-    let value3 = root["hello"]["test"]["value3"].evalute()?.as_str();
+    let value3 = root["hello"]["test"]["value3"].evaluate()?.as_str();
     assert_eq!(value3, "value1[12], value2[13]");
     Ok(())
 }
@@ -64,7 +64,7 @@ value1 = -12
 value2 = value1.abs()
 "#;
     let root = FamlExpr::from_str(faml_str)?;
-    let value3 = root["hello"]["value2"].evalute()?.as_str();
+    let value3 = root["hello"]["value2"].evaluate()?.as_str();
     assert_eq!(value3, "12");
     Ok(())
 }
@@ -84,7 +84,7 @@ fn test5() -> anyhow::Result<()> {
         "#;
     let mut root = FamlExpr::from_str(faml_str)?;
     root["hello"]["value"].set_int(14);
-    let name = root["hello"]["name"].evalute()?.as_str();
+    let name = root["hello"]["name"].evaluate()?.as_str();
     assert_eq!(name, "hello world 14");
     Ok(())
 }

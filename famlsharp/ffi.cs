@@ -24,7 +24,7 @@ public static class FFI
     public static extern void faml_expr_set_string(IntPtr pexpr, [MarshalAs(UnmanagedType.LPStr)] string ppath, [MarshalAs(UnmanagedType.LPStr)] string pvalue);
 
     [DllImport("faml.dll", CallingConvention = CallingConvention.Cdecl)]
-    public static extern int faml_expr_evalute(IntPtr pexpr, [MarshalAs(UnmanagedType.LPStr)] string ppath, out IntPtr ppval, out IntPtr pperr);
+    public static extern int faml_expr_evaluate(IntPtr pexpr, [MarshalAs(UnmanagedType.LPStr)] string ppath, out IntPtr ppval, out IntPtr pperr);
 
     [DllImport("faml.dll", CallingConvention = CallingConvention.Cdecl)]
     public static extern int faml_value_is_none(IntPtr pval, [MarshalAs(UnmanagedType.LPStr)] string ppath);

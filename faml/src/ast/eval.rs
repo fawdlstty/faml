@@ -1,3 +1,5 @@
+use std::{collections::HashMap, sync::OnceLock};
+
 use anyhow::anyhow;
 
 use super::faml_value::{ApplyExt, FamlValue};
@@ -33,6 +35,38 @@ impl Op1Evaluator {
 pub(crate) struct Op2Evaluator {}
 
 impl Op2Evaluator {
+    pub fn get_level(op: &str) -> usize {
+        static OP2_LEVELS: OnceLock<HashMap<&'static str, usize>> = OnceLock::new();
+        *OP2_LEVELS
+            .get_or_init(|| {
+                [
+                    ("**", 0),
+                    ("*", 1),
+                    ("/", 1),
+                    ("%", 1),
+                    ("+", 2),
+                    ("-", 2),
+                    ("<<", 3),
+                    (">>", 3),
+                    ("^", 4),
+                    ("|", 4),
+                    ("&", 4),
+                    ("<", 5),
+                    ("<=", 5),
+                    (">", 5),
+                    (">=", 5),
+                    ("==", 6),
+                    ("!=", 6),
+                    ("&&", 7),
+                    ("||", 8),
+                ]
+                .into_iter()
+                .collect()
+            })
+            .get(op)
+            .unwrap_or(&9)
+    }
+
     pub fn eval(left: FamlValue, op: &str, right: FamlValue) -> anyhow::Result<FamlValue> {
         match (left, op, right) {
             (FamlValue::Bool(left), _, FamlValue::Bool(right)) => {

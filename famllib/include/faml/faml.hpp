@@ -120,10 +120,10 @@ public:
     }
   }
 
-  std::variant<FamlValue, std::string> evalute() {
+  std::variant<FamlValue, std::string> evaluate() {
     void *pval = nullptr;
     const char *perr = nullptr;
-    if (!!faml_expr_evalute(pexpr_.get(), path_.c_str(), &pval, &perr)) {
+    if (!!faml_expr_evaluate(pexpr_.get(), path_.c_str(), &pval, &perr)) {
       return FamlValue(pval);
     } else {
       std::string err = perr;

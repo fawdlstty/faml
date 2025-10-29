@@ -80,7 +80,7 @@ pub extern "C" fn faml_expr_set_string(
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn faml_expr_evalute(
+pub extern "C" fn faml_expr_evaluate(
     pexpr: *mut c_void,
     ppath: *const c_char,
     ppval: *mut *mut c_void,
@@ -89,7 +89,7 @@ pub extern "C" fn faml_expr_evalute(
     let expr = unsafe { Box::from_raw(pexpr as *mut FamlExpr) };
     let path = unsafe { CStr::from_ptr(ppath).to_str().unwrap_or("") };
     let a = &expr[path];
-    let b = a.evalute();
+    let b = a.evaluate();
     let ret = match b {
         Ok(root) => {
             unsafe { *ppval = Box::leak(Box::new(root)) as *mut FamlValue as *mut c_void };

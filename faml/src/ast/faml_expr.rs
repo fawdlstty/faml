@@ -11,38 +11,6 @@ use std::collections::HashMap;
 use std::ops::{Index, IndexMut};
 use std::sync::{Arc, OnceLock, Weak};
 
-fn get_op2_level(op: &str) -> usize {
-    static OP2_LEVELS: OnceLock<HashMap<&'static str, usize>> = OnceLock::new();
-    *OP2_LEVELS
-        .get_or_init(|| {
-            [
-                ("**", 0),
-                ("*", 1),
-                ("/", 1),
-                ("%", 1),
-                ("+", 2),
-                ("-", 2),
-                ("<<", 3),
-                (">>", 3),
-                ("^", 4),
-                ("|", 4),
-                ("&", 4),
-                ("<", 5),
-                ("<=", 5),
-                (">", 5),
-                (">=", 5),
-                ("==", 6),
-                ("!=", 6),
-                ("&&", 7),
-                ("||", 8),
-            ]
-            .into_iter()
-            .collect()
-        })
-        .get(op)
-        .unwrap_or(&9)
-}
-
 #[derive(Parser)]
 #[grammar = "../faml.pest"]
 pub struct FamlParser;
@@ -107,7 +75,7 @@ impl FamlExprIfAnno {
 }
 
 impl FamlExpr {
-    fn default() -> &'static FamlExpr {
+    fn empty() -> &'static FamlExpr {
         static FAML_EMPTY: OnceLock<FamlExpr> = OnceLock::new();
         FAML_EMPTY.get_or_init(|| FamlExpr::new())
     }
@@ -301,7 +269,7 @@ impl FamlExprImpl {
 impl Index<usize> for FamlExpr {
     type Output = FamlExpr;
     fn index(&self, index: usize) -> &Self::Output {
-        self.get_at(index).unwrap_or(Self::default())
+        self.get_at(index).unwrap_or(Self::empty())
     }
 }
 
@@ -314,7 +282,7 @@ impl IndexMut<usize> for FamlExpr {
 impl Index<&str> for FamlExpr {
     type Output = Self;
     fn index(&self, index: &str) -> &Self::Output {
-        self.get(index).unwrap_or(Self::default())
+        self.get(index).unwrap_or(Self::empty())
     }
 }
 
@@ -563,7 +531,7 @@ impl FamlExpr {
         let mut ops: Vec<_> = ops
             .into_iter()
             .map(|op| {
-                let level = get_op2_level(&op[..]);
+                let level = Op2Evaluator::get_level(&op[..]);
                 (op, level)
             })
             .collect();
@@ -576,7 +544,7 @@ impl FamlExpr {
                 for j in 1..ops.len() {
                     if ops[j - i].1 == i && ops[j].1 == i {
                         exprs.insert(j, exprs[j].clone());
-                        ops.insert(j, ("&&".to_string(), get_op2_level("&&")));
+                        ops.insert(j, ("&&".to_string(), Op2Evaluator::get_level("&&")));
                     }
                 }
             }
@@ -715,27 +683,28 @@ impl FamlExpr {
         Ok(())
     }
 
-    pub fn evalute(&self) -> anyhow::Result<FamlValue> {
+    pub fn evaluate(&self) -> anyhow::Result<FamlValue> {
         match &self.base().expr {
             FamlExprImpl::None => Ok(FamlValue::None),
             FamlExprImpl::Value(val) => Ok(val.clone()),
             FamlExprImpl::Array(arr) => {
                 let mut ret = Vec::new();
                 for item in arr.iter() {
-                    ret.push(item.evalute()?);
+                    ret.push(item.evaluate()?);
                 }
                 Ok(FamlValue::Array(ret))
             }
             FamlExprImpl::Map(map) => {
                 let mut ret = HashMap::new();
                 for (key, item) in map.iter() {
-                    ret.insert(key.clone(), item.evalute()?);
+                    ret.insert(key.clone(), item.evaluate()?);
                 }
                 Ok(FamlValue::Map(ret))
             }
             FamlExprImpl::TempName(names) => {
                 let mut names: Vec<_> = names.iter().map(|p| &p[..]).collect();
                 let mut expr = match names.first() {
+                    Some(&"null") => FamlExprImpl::None.to_expr(),
                     Some(&"base") => {
                         names.remove(0);
                         self.base().base_expr.upgrade()?
@@ -753,30 +722,30 @@ impl FamlExpr {
                         .ok_or_else(|| anyhow!("node has no field1[{name}]"))?
                         .clone();
                 }
-                expr.evalute()
+                expr.evaluate()
             }
             FamlExprImpl::Op1Prefix((op, a)) => {
-                let a = a.evalute()?;
+                let a = a.evaluate()?;
                 Op1Evaluator::eval_prefix(&op, a)
             }
             FamlExprImpl::Op1Suffix((a, op)) => {
-                let a = a.evalute()?;
+                let a = a.evaluate()?;
                 Op1Evaluator::eval_suffix(&op, a)
             }
             FamlExprImpl::Op2((a, op, b)) => {
-                let a = a.evalute()?;
-                let b = b.evalute()?;
+                let a = a.evaluate()?;
+                let b = b.evaluate()?;
                 Op2Evaluator::eval(a, &op, b)
             }
-            FamlExprImpl::Op3((a, b, c)) => match a.evalute()?.as_bool() {
-                Some(true) => b.evalute(),
-                Some(false) => c.evalute(),
+            FamlExprImpl::Op3((a, b, c)) => match a.evaluate()?.as_bool() {
+                Some(true) => b.evaluate(),
+                Some(false) => c.evaluate(),
                 None => Err(anyhow!("bool expected"))?,
             },
             FamlExprImpl::FormatString((strs, exprs)) => {
                 let mut str_exprs = vec![];
                 for expr in exprs {
-                    str_exprs.push(expr.evalute()?.as_str());
+                    str_exprs.push(expr.evaluate()?.as_str());
                 }
                 str_exprs.push("".to_string());
                 let mut ret = "".to_string();
@@ -789,7 +758,7 @@ impl FamlExpr {
             FamlExprImpl::AccessVar((expr, name)) => expr
                 .get(&name)
                 .ok_or_else(|| anyhow!("node has no field2[{name}]"))?
-                .evalute(),
+                .evaluate(),
             FamlExprImpl::InvokeFunc((expr, args)) => match &expr.base().expr {
                 FamlExprImpl::TempName(names) => {
                     let mut names = names.clone();
@@ -798,11 +767,11 @@ impl FamlExpr {
                         let mut obj_expr = FamlExprImpl::TempName(names).to_expr();
                         obj_expr.base_mut().base_expr = expr.base().base_expr.clone();
                         obj_expr.base_mut().super_expr = expr.base().super_expr.clone();
-                        obj_expr.evalute()?
+                        obj_expr.evaluate()?
                     };
                     let mut arg_vals = vec![];
                     for arg in args {
-                        arg_vals.push(arg.evalute()?);
+                        arg_vals.push(arg.evaluate()?);
                     }
                     obj_val.invoke(&func, &arg_vals)
                 }
@@ -810,11 +779,11 @@ impl FamlExpr {
             },
             FamlExprImpl::IfAnno(if_anno) => {
                 for (cond, value) in &if_anno.ifcond_values {
-                    if cond.evalute()?.as_bool() == Some(true) {
-                        return value.evalute();
+                    if cond.evaluate()?.as_bool() == Some(true) {
+                        return value.evaluate();
                     }
                 }
-                return if_anno.default_value.evalute();
+                return if_anno.default_value.evaluate();
             }
         }
     }
@@ -824,7 +793,7 @@ impl FamlExpr {
     }
 
     pub fn deserialize<T: for<'a> Deserialize<'a>>(&self) -> anyhow::Result<T> {
-        Ok(serde_json::from_value(self.evalute()?.to_json())?)
+        Ok(serde_json::from_value(self.evaluate()?.to_json())?)
     }
 }
 
