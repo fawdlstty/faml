@@ -7,5 +7,3 @@ members = ["faml", "famllib"]
 
 [workspace.package]
 publish = false
-
-# cargo publish --allow-dirty --registry crates-io

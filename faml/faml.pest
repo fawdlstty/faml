@@ -1,4 +1,5 @@
-WHITESPACE = _{ " " | "\t" | NEWLINE }
+WHITESPACE = _{ " " | "\t" }
+NEWLINE    = _{ "\n" | "\r\n" }
 COMMENT    = _{ ("//" ~ (!NEWLINE ~ ANY)*) | ("/*" ~ (!"*/" ~ ANY)* ~ "*/") }
 
 boolean_literal       = @{ "true" | "false" }
@@ -13,26 +14,27 @@ literal               =  { boolean_literal | number_literal | string_literal | f
 
 id      = { (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
 ids     = { id ~ ("." ~ id)* }
-anno_if = { "@if" ~ expr }
+anno_if = { "@if" ~ expr ~ NEWLINE+ }
 
-op2         = { "+" | "-" | "*" | "/" | "**" | "%" | "|" | "&" | "||" | "&&" | "<<" | ">>" | "^" | "<" | "<=" | ">" | ">=" | "==" | "!=" }
-base_expr   = { literal | ids | ("(" ~ expr ~ ")") }
-_exprs      = { (expr ~ ("," ~ expr)*)? }
-array_expr  = { "[" ~ _exprs ~ "]" }
-map_expr    = { "{" ~ (map_assign_pair ~ ("," ~ map_assign_pair)*)* ~ "}" }
-strong_expr = { base_expr | array_expr | map_expr }
-expr_prefix = { "++" | "--" | "!" | "-" | "~" }
-expr_suffix = { ("(" ~ _exprs ~ ")") | "++" | "--" }
-middle_expr = { expr_prefix* ~ strong_expr ~ expr_suffix* }
-weak_expr   = { middle_expr ~ (op2 ~ middle_expr)* }
-op3_expr    = { middle_expr ~ "?" ~ middle_expr ~ ":" ~ middle_expr }
-expr        = { weak_expr | op3_expr }
+op2         =  { "+" | "-" | "*" | "/" | "**" | "%" | "|" | "&" | "||" | "&&" | "<<" | ">>" | "^" | "<" | "<=" | ">" | ">=" | "==" | "!=" }
+inner_sp    = _{ (NEWLINE*) ~ "," ~ (NEWLINE*) }
+base_expr   =  { literal | ids | ("(" ~ expr ~ ")") }
+_exprs      =  { (expr ~ (inner_sp ~ expr)*)? }
+array_expr  =  { "[" ~ _exprs ~ "]" }
+map_expr    =  { "{" ~ NEWLINE* ~ (map_assign_pair ~ (inner_sp ~ map_assign_pair)*)* ~ NEWLINE* ~ "}" }
+strong_expr =  { base_expr | array_expr | map_expr }
+expr_prefix =  { "++" | "--" | "!" | "-" | "~" }
+expr_suffix =  { ("(" ~ _exprs ~ ")") | "++" | "--" | id }
+middle_expr =  { expr_prefix* ~ strong_expr ~ expr_suffix* }
+weak_expr   =  { middle_expr ~ (op2 ~ middle_expr)* }
+op3_expr    =  { middle_expr ~ "?" ~ middle_expr ~ ":" ~ middle_expr }
+expr        =  { weak_expr | op3_expr }
 
-assign_pair     = { anno_if? ~ ids ~ "=" ~ expr }
-map_assign_pair = { ids ~ ":" ~ expr }
+assign_pair     = { anno_if? ~ ids ~ "=" ~ expr ~ NEWLINE+ }
+map_assign_pair = { ids ~ ":" ~ expr ~ NEWLINE* }
 
-group_head       = { "[" ~ ids ~ "]" }
-group_array_head = { "[[" ~ ids ~ "]]" }
+group_head       = { "[" ~ ids ~ "]" ~ NEWLINE+ }
+group_array_head = { "[[" ~ ids ~ "]]" ~ NEWLINE+ }
 group_block      = { anno_if? ~ (group_head | group_array_head) ~ assign_pair* }
 
-faml = { SOI ~ (group_block)* ~ EOI }
+faml = { SOI ~ NEWLINE* ~ (group_block)* ~ EOI }

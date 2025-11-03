@@ -267,7 +267,7 @@ impl FamlExprImpl {
 }
 
 impl Index<usize> for FamlExpr {
-    type Output = FamlExpr;
+    type Output = Self;
     fn index(&self, index: usize) -> &Self::Output {
         self.get_at(index).unwrap_or(Self::empty())
     }
@@ -423,6 +423,7 @@ impl FamlExpr {
         for root_item in root.into_inner() {
             match root_item.as_rule() {
                 Rule::expr => exprs.push(Self::parse_expr(root_item)),
+                Rule::_exprs => return Self::parse_array_expr(root_item),
                 _ => unreachable!(),
             }
         }
@@ -455,18 +456,17 @@ impl FamlExpr {
 
     fn parse_middle_expr(root: pest::iterators::Pair<'_, Rule>) -> Self {
         enum SuffixOp {
-            AccessVar(String),
+            //AccessVar(String),
             InvokeFunc(Vec<FamlExpr>),
             Op(String),
         }
         impl SuffixOp {
             pub fn parse(root: pest::iterators::Pair<'_, Rule>) -> Self {
                 let root_str = root.as_str();
-                let mut id = "".to_string();
                 let mut args = None;
                 for root_item in root.into_inner() {
                     match root_item.as_rule() {
-                        Rule::id => id = root_item.as_str().to_string(),
+                        Rule::id => return SuffixOp::Op(root_str.to_string()),
                         Rule::_exprs => {
                             let mut exprs = vec![];
                             for root_item1 in root_item.into_inner() {
@@ -480,14 +480,10 @@ impl FamlExpr {
                         _ => unreachable!(),
                     }
                 }
-                if id.is_empty() {
-                    if let Some(args) = args {
-                        SuffixOp::InvokeFunc(args)
-                    } else {
-                        SuffixOp::Op(root_str.to_string())
-                    }
+                if let Some(args) = args {
+                    SuffixOp::InvokeFunc(args)
                 } else {
-                    SuffixOp::AccessVar(id)
+                    SuffixOp::Op(root_str.to_string())
                 }
             }
         }
@@ -508,7 +504,7 @@ impl FamlExpr {
         }
         while !suffix_ops.is_empty() {
             expr = match suffix_ops.remove(0) {
-                SuffixOp::AccessVar(name) => FamlExprImpl::AccessVar((expr, name)),
+                //SuffixOp::AccessVar(name) => FamlExprImpl::AccessVar((expr, name)),
                 SuffixOp::InvokeFunc(args) => FamlExprImpl::InvokeFunc((expr, args)),
                 SuffixOp::Op(suffix_op) => FamlExprImpl::Op1Suffix((expr, suffix_op)),
             }
@@ -632,7 +628,7 @@ impl FamlExpr {
         ret
     }
 
-    fn apply(&mut self, val: Self) -> anyhow::Result<()> {
+    pub fn apply(&mut self, val: Self) -> anyhow::Result<()> {
         let expr1_impl = &mut self.base_mut().expr;
         let expr2_impl = val.into_base().expr;
         match (expr1_impl, expr2_impl) {
@@ -704,6 +700,10 @@ impl FamlExpr {
             FamlExprImpl::TempName(names) => {
                 let mut names: Vec<_> = names.iter().map(|p| &p[..]).collect();
                 let mut expr = match names.first() {
+                    Some(&"nan") => FamlExprImpl::Value(FamlValue::Float64(f64::NAN)).to_expr(),
+                    Some(&"infinity") => {
+                        FamlExprImpl::Value(FamlValue::Float64(f64::INFINITY)).to_expr()
+                    }
                     Some(&"null") => FamlExprImpl::None.to_expr(),
                     Some(&"base") => {
                         names.remove(0);
@@ -730,7 +730,7 @@ impl FamlExpr {
             }
             FamlExprImpl::Op1Suffix((a, op)) => {
                 let a = a.evaluate()?;
-                Op1Evaluator::eval_suffix(&op, a)
+                Op1Evaluator::eval_suffix(a, &op)
             }
             FamlExprImpl::Op2((a, op, b)) => {
                 let a = a.evaluate()?;

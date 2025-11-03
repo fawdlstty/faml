@@ -1,6 +1,9 @@
-use serde::Deserialize;
+use crate::ast::invoke::DurationExt;
+use serde::{Deserialize, Serialize};
+use serde_json::json;
 use std::collections::HashMap;
 use std::ops::{Index, IndexMut};
+use std::time::Duration;
 
 #[derive(Debug, Clone)]
 pub enum FamlValue {
@@ -11,6 +14,33 @@ pub enum FamlValue {
     String(String),
     Array(Vec<FamlValue>),
     Map(HashMap<String, FamlValue>),
+    Duration(Duration),
+    Distance(Distance),
+}
+
+impl Serialize for FamlValue {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            FamlValue::None => serializer.serialize_unit(),
+            FamlValue::Bool(b) => serializer.serialize_bool(*b),
+            FamlValue::Int64(i) => serializer.serialize_i64(*i),
+            FamlValue::Float64(f) => serializer.serialize_f64(*f),
+            FamlValue::String(s) => serializer.serialize_str(s),
+            FamlValue::Array(arr) => arr.serialize(serializer),
+            FamlValue::Map(map) => map.serialize(serializer),
+            FamlValue::Duration(dur) => {
+                let root = json!({ "famltype": "duration", "unit": "seconds", "value": dur.as_nanos() as f64 / 1_000_000_000.0 });
+                root.serialize(serializer)
+            }
+            FamlValue::Distance(dis) => {
+                let root = json!({ "famltype": "distance", "unit": "meters", "value": dis.0 });
+                root.serialize(serializer)
+            }
+        }
+    }
 }
 
 impl FamlValue {
@@ -87,6 +117,8 @@ impl FamlValue {
                 ret.push_str(" }");
                 ret
             }
+            FamlValue::Duration(dur) => dur.to_str(),
+            FamlValue::Distance(dis) => dis.to_str(),
         }
     }
 
@@ -161,6 +193,8 @@ impl FamlValue {
                 }
                 rets.into()
             }
+            FamlValue::Duration(dur) => dur.to_str().into(),
+            FamlValue::Distance(dis) => dis.to_str().into(),
         }
     }
 
@@ -394,5 +428,71 @@ impl Into<FamlValue> for f64 {
 impl Into<FamlValue> for String {
     fn into(self) -> FamlValue {
         FamlValue::String(self)
+    }
+}
+
+impl Into<FamlValue> for Duration {
+    fn into(self) -> FamlValue {
+        FamlValue::Duration(self)
+    }
+}
+
+impl Into<FamlValue> for Distance {
+    fn into(self) -> FamlValue {
+        FamlValue::Distance(self)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Distance(f64);
+
+impl Distance {
+    pub fn from_megameters(meter: f64) -> Self {
+        Distance(meter * 1_000_000.0)
+    }
+    pub fn from_kilometers(meter: f64) -> Self {
+        Distance(meter * 1_000.0)
+    }
+    pub fn from_meters(meter: f64) -> Self {
+        Distance(meter)
+    }
+    pub fn from_millimeters(meter: f64) -> Self {
+        Distance(meter / 1_000.0)
+    }
+    pub fn from_micrometers(meter: f64) -> Self {
+        Distance(meter / 1_000_000.0)
+    }
+    pub fn from_nanometers(meter: f64) -> Self {
+        Distance(meter / 1_000_000_000.0)
+    }
+
+    pub fn to_megameters(&self) -> f64 {
+        self.0 / 1_000_000.0
+    }
+    pub fn to_kilometers(&self) -> f64 {
+        self.0 / 1_000.0
+    }
+    pub fn to_meters(&self) -> f64 {
+        self.0
+    }
+    pub fn to_millimeters(&self) -> f64 {
+        self.0 * 1_000.0
+    }
+    pub fn to_micrometers(&self) -> f64 {
+        self.0 * 1_000_000.0
+    }
+    pub fn to_nanometers(&self) -> f64 {
+        self.0 * 1_000_000_000.0
+    }
+
+    pub fn to_str(&self) -> String {
+        match self.0 {
+            n if n < 0.000_000_1 => format!("{} nanometers", n * 1_000_000_000.0),
+            n if n < 0.000_1 => format!("{} micrometers", n * 1_000_000.0),
+            n if n < 1.0 => format!("{} millimeters", n * 1_000.0),
+            n if n < 1_000.0 => format!("{n} meters"),
+            n if n < 1_000_000.0 => format!("{} kilometers", n / 1_000.0),
+            n => format!("{} megameters", n / 1_000_000.0),
+        }
     }
 }
