@@ -14,7 +14,7 @@ export default defineUserConfig({
     navbar: ['/', '/guide/01_hello_world'],
     sidebar: {
       '/guide/': [
-        "00_introduction", "01_hello_world", "02_method_annotation", "03_method_declare",
+        "00_introduction", "01_hello_world", "02_structs_and_types", "03_expressions",
         "04_server_route", "05_graceful_shutdown", "06_client"
       ]
     }
