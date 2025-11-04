@@ -4,38 +4,23 @@
 
 首先是对其他配置项的引用。直接写配置名称即可实现引用：
 
-```rust
-fn main() -> anyhow::Result<()> {
-    let faml_str = r#"
+```faml
 [group1]
 int1_val = 20
 
 [group2]
 int2_val = 22
-int3_val = int2_val                                     // 设置值为当前层级的参数值
-int4_val = base.group1.int1_val + super.group1.int1_val // 从顶层开始索引以及从上一级开始索引
-format_str_field = $"hello, {int4_val}"                 // 格式化字符串
-"#;
-    let root = faml::FamlExpr::from_str(faml_str)?;
-    let value = root.evaluate()?;
-    let json = serde_json::to_string_pretty(&value)?;
-    println!("{json}");
-    Ok(())
-}
+int3_val = int2_val                                     // 22
+int4_val = base.group1.int1_val + super.group1.int1_val // 40
+format_str_field = $"hello, {int4_val}"                 // "hello, 40"
 ```
 
-以上代码的json内容为（注意，输出可能是乱序）：
+最后是数组或哈希表的成员访问。也很简单，类似编程语言：
 
-```json
-{
-  "group1": {
-    "int1_val": 20
-  },
-  "group2": {
-    "int2_val": 22,
-    "int3_val": 22,
-    "int4_val": 40,
-    "format_str_field": "hello, 40"
-  }
-}
+```faml
+[group1]
+array_field = [1, 2, 3, 4, 5]        // 数组类型
+map_field = { foo: "bar", baz: 123 } // 哈希表类型
+array2 = array_field[2]              // 3
+mapfoo = map_field.foo               // "bar"
 ```

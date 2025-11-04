@@ -8,9 +8,7 @@
 
 基本结构的写法近似于yaml，但注意标识符类似编程语言，只能为下划线、字母或数字的组合，且只允许下划线或字母开头。示例代码：
 
-```rust
-fn main() -> anyhow::Result<()> {
-    let faml_str = r#"
+```faml
 [group]
 field = 123
 
@@ -19,16 +17,9 @@ field1 = 111
 
 [[groups]]
 field2 = 111
-"#;
-    let root = faml::FamlExpr::from_str(faml_str)?;
-    let value = root.evaluate()?;
-    let json = serde_json::to_string_pretty(&value)?;
-    println!("{json}");
-    Ok(())
-}
 ```
 
-以上代码的json内容为（注意，输出可能是乱序）：
+以上代码的等价json内容为：
 
 ```json
 {
@@ -42,9 +33,7 @@ field2 = 111
 
 数据类型相对于yaml有极大扩展：
 
-```rust
-fn main() -> anyhow::Result<()> {
-    let faml_str = r#"
+```faml
 [group]
 bool_field = true
 int_field = 123
@@ -55,16 +44,9 @@ array_field = [1, 2, 3, 4, 5]                  // 数组类型
 map_field = { foo: "bar", baz: 123 }
 duration_field = 123.456 seconds               // 持续时间类型
 distance_field = 123.456 meters                // 距离类型
-"#;
-    let root = faml::FamlExpr::from_str(faml_str)?;
-    let value = root.evaluate()?;
-    let json = serde_json::to_string_pretty(&value)?;
-    println!("{json}");
-    Ok(())
-}
 ```
 
-以上代码的json内容为（注意，输出可能是乱序）：
+以上代码的json内容为：
 
 ```json
 {

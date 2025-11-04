@@ -1,4 +1,5 @@
 use crate::ast::invoke::DurationExt;
+use crate::{FamlExpr, FamlExprImpl};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::HashMap;
@@ -44,6 +45,10 @@ impl Serialize for FamlValue {
 }
 
 impl FamlValue {
+    pub fn to_expr(self) -> FamlExpr {
+        FamlExprImpl::Value(self).to_expr()
+    }
+
     pub fn is_none(&self) -> bool {
         match self {
             FamlValue::None => true,

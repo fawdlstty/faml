@@ -25,7 +25,7 @@ impl InvokeExt for FamlValue {
 impl InvokeExt for () {
     fn invoke(&mut self, func: &str, args: &Vec<FamlValue>) -> anyhow::Result<FamlValue> {
         match func {
-            "to_str" if args.len() == 0 => Ok("(none)".to_string().into()),
+            "to_str" if args.len() == 0 => Ok("null".to_string().into()),
             _ => Err(anyhow!(
                 "unknown ().{func} with args[count: {}]",
                 args.len()
@@ -76,7 +76,7 @@ impl InvokeExt for i64 {
                 "tan" => (*self as f64).tan().into(),
                 "tanh" => (*self as f64).tanh().into(),
                 "to_float" => (*self as f64).into(),
-                "to_quantified" => to_quantified(*self as f64).into(),
+                "to_quantified" => (*self as f64).to_quantified().into(),
                 "to_str" => self.to_string().into(),
                 _ => Err(anyhow!(
                     "unknown i64.{func} with args[count: {}]",
@@ -139,6 +139,10 @@ impl InvokeExt for f64 {
                 "cosh" => self.cosh().into(),
                 "exp" => self.exp().into(),
                 "exp2" => self.exp2().into(),
+                "floor" => self.floor().into(),
+                "floori" => (self.floor() as i64).into(),
+                "fract" => self.fract().into(),
+                "gamma" => self.f64_gamma().into(),
                 "is_finite" => self.is_finite().into(),
                 "is_infinite" => self.is_infinite().into(),
                 "is_nan" => self.is_nan().into(),
@@ -147,10 +151,6 @@ impl InvokeExt for f64 {
                 "ln" => self.ln().into(),
                 "log10" => self.log10().into(),
                 "log2" => self.log2().into(),
-                "floor" => self.floor().into(),
-                "floori" => (self.floor() as i64).into(),
-                "fract" => self.fract().into(),
-                "gamma" => self.f64_gamma().into(),
                 "next_down" => self.next_down().into(),
                 "next_up" => self.next_up().into(),
                 "round" => self.round().into(),
@@ -165,7 +165,7 @@ impl InvokeExt for f64 {
                 "tanh" => self.tanh().into(),
                 "trunc" => self.trunc().into(),
                 "trunci" => (self.trunc() as i64).into(),
-                "to_quantified" => to_quantified(*self).into(),
+                "to_quantified" => self.to_quantified().into(),
                 "to_degrees" => self.to_degrees().into(),
                 "to_radians" => self.to_radians().into(),
                 "to_str" => self.to_string().into(),
@@ -248,8 +248,9 @@ impl InvokeExt for Vec<FamlValue> {
                 Ok(FamlValue::None)
             }
             "reverse" if args.len() == 0 => {
-                self.reverse();
-                Ok(FamlValue::None)
+                let mut ret = self.clone();
+                ret.reverse();
+                Ok(FamlValue::Array(ret))
             }
             "to_str" if args.len() == 0 => {
                 let mut s = "[ ".to_string();
@@ -352,6 +353,7 @@ impl InvokeExt for Distance {
 
 pub trait F64Ext {
     fn f64_gamma(self) -> f64;
+    fn to_quantified(self) -> String;
 }
 
 impl F64Ext for f64 {
@@ -384,6 +386,17 @@ impl F64Ext for f64 {
             (2.0 * std::f64::consts::PI).sqrt() * t.powf(x + 0.5) * (-t).exp() * a
         }
     }
+
+    fn to_quantified(self) -> String {
+        const U: f64 = 1024.0;
+        match self {
+            f if f <= U => format!("{f} B"),
+            f if f <= U * U => format!("{} KB", f / U),
+            f if f <= U * U * U => format!("{} MB", f / U / U),
+            f if f <= U * U * U * U => format!("{} GB", f / U / U / U),
+            f => format!("{} TB", f / U / U / U / U),
+        }
+    }
 }
 
 pub trait DurationExt {
@@ -406,16 +419,5 @@ impl DurationExt for Duration {
             v if v < G * D * 365.0 => format!("{} months", v / G / D / 30.0).into(),
             v => format!("{} years", v / G / D / 365.0).into(),
         }
-    }
-}
-
-fn to_quantified(f: f64) -> String {
-    const U: f64 = 1024.0;
-    match f {
-        _ if f <= U => format!("{f} B"),
-        _ if f <= U * U => format!("{} KB", f / U),
-        _ if f <= U * U * U => format!("{} MB", f / U / U),
-        _ if f <= U * U * U * U => format!("{} GB", f / U / U / U),
-        _ => format!("{} TB", f / U / U / U / U),
     }
 }
