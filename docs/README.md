@@ -6,7 +6,7 @@ actions:
   - text: 入门示例
     link: /guide/01_hello_world.md
     type: primary
-  - text: 查看源码
+  - text: GitHub
     link: https://github.com/fawdlstty/faml
     type: secondary
 

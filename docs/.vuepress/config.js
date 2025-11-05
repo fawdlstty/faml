@@ -11,7 +11,10 @@ export default defineUserConfig({
   theme: defaultTheme({
     //logo: 'https://vuejs.press/images/hero.png',
 
-    navbar: ['/', '/guide/01_hello_world'],
+    navbar: ['/', '/guide/01_hello_world', {
+      text: 'GitHub',
+      link: 'https://github.com/fawdlstty/faml'
+    }],
     sidebar: {
       '/guide/': [
         "00_introduction", "01_hello_world", "02_structs_and_types",
