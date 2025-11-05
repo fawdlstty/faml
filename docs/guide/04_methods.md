@@ -74,7 +74,29 @@ num_to_str = num.to_str()                      // "12.3"
 字符串值函数：
 
 ```faml
+[group]
+sval = "a b  c"
+sval_len = sval.len()                       // 6
+sval_sp1 = sval.split(" ")                  // [ "a", "b", "", "c" ]
+sval_sp2 = sval.split_once(" ")             // ["a", "b  c"]
+sval_sp3 = sval.split_without_empty(" ")    // [ "a", "b", "c" ]
 
+sval2 = "a+b-c/d*e"
+sval2_sp1 = sval2.split("+", "-", "*", "/") // [ "a", "b", "c", "d", "e" ]
+
+sval3 = "  a  "
+sval3_trim = sval3.trim()                   // "a"
+sval3_is_empty = sval3.is_empty()           // false
+
+sval4 = "AaBbCc"
+sval4_lower = sval4.to_lowercase()          // "aabbcc"
+sval4_upper = sval4.to_uppercase()          // "AABBCC"
+sval4_cts = sval4.contains("Bb")            // true
+sval4_sw = sval4.starts_with("Aa")          // true
+sval4_ew = sval4.ends_with("Cc")            // true
+sval4_f = sval4.find("Bb")                  // 2
+sval4_rf = sval4.rfind("Bb")                // 2
+sval4_rp = sval4.repeat(3)                  // "AaBbCcAaBbCcAaBbCc"
 ```
 
 数组值函数：
@@ -82,7 +104,8 @@ num_to_str = num.to_str()                      // "12.3"
 ```faml
 [group]
 arr = [1, 2, 3, 4, 5]
-arr_len = arr.len()     // 5
-arr_rev = arr.reverse() // [ 5, 4, 3, 2, 1 ]
-arr_str = arr.to_str()  // "[ 1, 2, 3, 4, 5 ]"
+arr_len = arr.len()       // 5
+arr_rev = arr.reverse()   // [ 5, 4, 3, 2, 1 ]
+arr_str = arr.to_str()    // "[ 1, 2, 3, 4, 5 ]"
+arr_join = arr.join(", ") // "1, 2, 3, 4, 5"
 ```

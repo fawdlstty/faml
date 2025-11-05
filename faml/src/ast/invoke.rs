@@ -209,7 +209,9 @@ impl InvokeExt for String {
             Ok(match func {
                 "is_empty" => FamlValue::Bool(self.is_empty()),
                 "len" => FamlValue::Int64(self.len() as i64),
+                "lines" => self.invoke("split", &vec![FamlValue::String("\n".to_string())])?,
                 "to_lowercase" => FamlValue::String(self.to_lowercase()),
+                "to_str" => FamlValue::String(self.clone()),
                 "to_uppercase" => FamlValue::String(self.to_uppercase()),
                 "trim" => FamlValue::String(self.trim().to_string()),
                 _ => Err(anyhow!(
@@ -218,14 +220,96 @@ impl InvokeExt for String {
                 ))?,
             })
         } else {
-            // split, split_once, split_remove_empty
-            if args.len() == 1 {
-                // split, split_once, split_at, lines, contains, starts_with, ends_with
-                // find, rfind
-                todo!()
+            if func == "split" || func == "split_once" || func == "split_without_empty" {
+                let args: Vec<_> = args.iter().map(|p| p.as_str()).collect();
+                let mut ret: Vec<FamlValue> = vec![];
+                let mut target = &self[..];
+                let is_nempty = func == "split_without_empty";
+                while !target.is_empty() {
+                    let mut ps: Vec<_> = args
+                        .iter()
+                        .filter_map(|p| target.find(p).map(|n| (n, p.len())))
+                        .collect();
+                    ps.sort_by_key(|p| p.0);
+                    if let Some((n, len)) = ps.first() {
+                        let r = target[..*n].to_string();
+                        if !is_nempty || r.len() > 0 {
+                            ret.push(FamlValue::String(r));
+                        }
+                        target = &target[*n + *len..];
+                    }
+                    if ps.len() == 0 || func == "split_once" {
+                        let r = target.to_string();
+                        if !is_nempty || r.len() > 0 {
+                            ret.push(FamlValue::String(r));
+                        }
+                        break;
+                    }
+                }
+                Ok(FamlValue::Array(ret))
             } else if args.len() == 1 {
-                // replace, replace_all
-                todo!()
+                Ok(match func {
+                    "contains" => {
+                        let arg = args[0].as_str();
+                        FamlValue::Bool(self.contains(&arg))
+                    }
+                    "ends_with" => {
+                        let arg = args[0].as_str();
+                        FamlValue::Bool(self.ends_with(&arg))
+                    }
+                    "find" => {
+                        let arg = args[0].as_str();
+                        match self.find(&arg) {
+                            Some(n) => FamlValue::Int64(n as i64),
+                            None => FamlValue::None,
+                        }
+                    }
+                    "repeat" => {
+                        let arg = args[0]
+                            .as_int()
+                            .ok_or(anyhow!("only type[int] arg for method[repeat]"))?;
+                        let mut ret = "".to_string();
+                        for _ in 0..arg {
+                            ret += self;
+                        }
+                        FamlValue::String(ret)
+                    }
+                    "rfind" => {
+                        let arg = args[0].as_str();
+                        match self.rfind(&arg) {
+                            Some(n) => FamlValue::Int64(n as i64),
+                            None => FamlValue::None,
+                        }
+                    }
+                    "split_at" => {
+                        let arg = args[0]
+                            .as_int()
+                            .ok_or(anyhow!("only type[int] arg for method[split_at]"))?;
+                        match self.len() >= arg as usize && arg >= 0 {
+                            true => FamlValue::Array(vec![
+                                FamlValue::String(self[..arg as usize].to_string()),
+                                FamlValue::String(self[arg as usize..].to_string()),
+                            ]),
+                            false => FamlValue::Array(vec![FamlValue::String(self.to_string())]),
+                        }
+                    }
+                    "starts_with" => {
+                        let arg = args[0].as_str();
+                        FamlValue::Bool(self.starts_with(&arg))
+                    }
+                    _ => Err(anyhow!(
+                        "unknown string.{func} with args[count: {}]",
+                        args.len()
+                    ))?,
+                })
+            } else if args.len() == 2 {
+                let pre = args[0].as_str();
+                let post = args[1].as_str();
+                Ok(FamlValue::String(match func {
+                    "replace_once" => self.replacen(&pre, &post, 1),
+                    "replace" => self.replace(&pre, &post),
+                    _ => panic!("unreachable"),
+                }))
             } else {
                 Err(anyhow!(
                     "unknown string.{func} with args[count: {}]",
@@ -239,6 +323,17 @@ impl InvokeExt for String {
 impl InvokeExt for Vec<FamlValue> {
     fn invoke(&mut self, func: &str, args: &Vec<FamlValue>) -> anyhow::Result<FamlValue> {
         match func {
+            "join" if args.len() == 1 => {
+                let sep = args[0].as_str();
+                let mut ret = "".to_string();
+                for (i, item) in self.iter().enumerate() {
+                    if i > 0 {
+                        ret += &sep;
+                    }
+                    ret += &item.as_str();
+                }
+                Ok(FamlValue::String(ret))
+            }
             "len" if args.len() == 0 => Ok(FamlValue::Int64(self.len() as i64)),
             "pop" if args.len() == 0 => self.pop().ok_or(anyhow!("Array is empty")),
             "push" => {

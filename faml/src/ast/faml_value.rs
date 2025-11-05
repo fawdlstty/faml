@@ -100,14 +100,14 @@ impl FamlValue {
 
     pub fn as_str(&self) -> String {
         match self {
-            FamlValue::None => "none".to_string(),
+            FamlValue::None => "null".to_string(),
             FamlValue::Bool(b) => b.to_string(),
             FamlValue::Int64(i) => i.to_string(),
             FamlValue::Float64(f) => f.to_string(),
             FamlValue::String(s) => s.clone(),
             FamlValue::Array(arr) => {
                 let arr: Vec<_> = arr.iter().map(|item| item.as_str()).collect();
-                format!("[{}]", arr.join(", "))
+                format!("[ {} ]", arr.join(", "))
             }
             FamlValue::Map(map) => {
                 let mut ret = "{ ".to_string();
