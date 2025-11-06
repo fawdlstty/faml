@@ -58,16 +58,8 @@ distance_field = 123.456 meters                // 距离类型
     "str_field": "hello world",
     "array_field": [ 1, 2, 3, 4, 5 ],
     "map_field": { "baz": 123, "foo": "bar" },
-    "duration_field": {
-      "famltype": "duration",
-      "unit": "seconds",
-      "value": 123.456
-    },
-    "distance_field": {
-      "famltype": "distance",
-      "unit": "meters",
-      "value": 123.456
-    }
+    "duration_field": "2.0576 mins",
+    "distance_field": "123.456 meters"
   }
 }
 ```

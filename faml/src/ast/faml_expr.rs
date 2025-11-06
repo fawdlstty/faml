@@ -465,7 +465,7 @@ impl FamlExpr {
                 let mut args = None;
                 for root_item in root.into_inner() {
                     match root_item.as_rule() {
-                        Rule::id => return SuffixOp::Op(root_str.to_string()),
+                        Rule::num_unit => return SuffixOp::Op(root_str.to_string()),
                         Rule::exprs => {
                             let mut exprs = vec![];
                             for root_item1 in root_item.into_inner() {

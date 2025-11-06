@@ -24,7 +24,29 @@ array_expr  =  { "[" ~ exprs ~ "]" }
 map_expr    =  { "{" ~ NEWLINE* ~ (map_assign_pair ~ (inner_sp ~ map_assign_pair)*)* ~ NEWLINE* ~ "}" }
 strong_expr =  { base_expr | array_expr | map_expr }
 expr_prefix =  { "++" | "--" | "!" | "-" | "~" }
-expr_suffix =  { ("(" ~ exprs ~ ")") | ("[" ~ expr ~ "]") | "++" | "--" | (WHITESPACE ~ id) }
+num_unit    =  {
+    "nanoseconds"
+  | "microseconds"
+  | "milliseconds"
+  | "seconds"
+  | "mins"
+  | "hours"
+  | "days"
+  | "weeks"
+  | "months"
+  | "years"
+  | "nanometers"
+  | "micrometers"
+  | "millimeters"
+  | "meters"
+  | "kilometers"
+  | "megameters"
+  | "KB"
+  | "MB"
+  | "GB"
+  | "TB"
+}
+expr_suffix =  { ("(" ~ exprs ~ ")") | ("[" ~ expr ~ "]") | "++" | "--" | num_unit }
 middle_expr =  { expr_prefix* ~ strong_expr ~ expr_suffix* }
 weak_expr   =  { middle_expr ~ (op2 ~ middle_expr)* }
 op3_expr    =  { middle_expr ~ "?" ~ middle_expr ~ ":" ~ middle_expr }

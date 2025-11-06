@@ -7,6 +7,20 @@ English | [简体中文](README.zh_CN.md)
 
 Faml is a dynamic configuration scripting language that can embed script code in the configuration file to achieve dynamic configuration update.
 
+example code:
+
+```faml
+[hello]
+value = 30
+name = $"hello {value + 12}" // hello 42
+```
+
+# Document
+
+<https://faml.fawdlstty.com>
+
+<!--
+
 ## Manual
 
 Install: Run `cargo add faml` in the project directory
@@ -24,8 +38,6 @@ name = $"hello {value + 12}"
     Ok(())
 }
 ```
-
-<!--
 
 ### C++
 

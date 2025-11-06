@@ -1,7 +1,6 @@
 use crate::ast::invoke::DurationExt;
 use crate::{FamlExpr, FamlExprImpl};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use std::collections::HashMap;
 use std::ops::{Index, IndexMut};
 use std::time::Duration;
@@ -32,14 +31,8 @@ impl Serialize for FamlValue {
             FamlValue::String(s) => serializer.serialize_str(s),
             FamlValue::Array(arr) => arr.serialize(serializer),
             FamlValue::Map(map) => map.serialize(serializer),
-            FamlValue::Duration(dur) => {
-                let root = json!({ "famltype": "duration", "unit": "seconds", "value": dur.as_nanos() as f64 / 1_000_000_000.0 });
-                root.serialize(serializer)
-            }
-            FamlValue::Distance(dis) => {
-                let root = json!({ "famltype": "distance", "unit": "meters", "value": dis.0 });
-                root.serialize(serializer)
-            }
+            FamlValue::Duration(dur) => serializer.serialize_str(&dur.to_str()),
+            FamlValue::Distance(dis) => serializer.serialize_str(&dis.to_str()),
         }
     }
 }
@@ -195,6 +188,32 @@ impl FamlValue {
                 let mut rets = serde_json::Map::new();
                 for (k, v) in maps.iter() {
                     rets.insert(k.clone(), v.to_json());
+                }
+                rets.into()
+            }
+            FamlValue::Duration(dur) => dur.to_str().into(),
+            FamlValue::Distance(dis) => dis.to_str().into(),
+        }
+    }
+
+    pub fn to_yaml(&self) -> serde_yaml::Value {
+        match self {
+            FamlValue::None => serde_yaml::Value::Null,
+            FamlValue::Bool(b) => (*b).into(),
+            FamlValue::Int64(i) => (*i).into(),
+            FamlValue::Float64(f) => (*f).into(),
+            FamlValue::String(s) => s.clone().into(),
+            FamlValue::Array(vals) => {
+                let mut rets = vec![];
+                for val in vals.iter() {
+                    rets.push(val.to_yaml());
+                }
+                rets.into()
+            }
+            FamlValue::Map(maps) => {
+                let mut rets = serde_yaml::Mapping::new();
+                for (k, v) in maps.iter() {
+                    rets.insert(serde_yaml::Value::String(k.clone()), v.to_yaml());
                 }
                 rets.into()
             }

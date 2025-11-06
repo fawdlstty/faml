@@ -7,6 +7,20 @@
 
 Faml 是一款动态配置脚本语言，可在配置文件里嵌入脚本代码，实现动态更新配置。
 
+示例代码：
+
+```faml
+[hello]
+value = 30
+name = $"hello {value + 12}" // hello 42
+```
+
+# 文档
+
+<https://faml.fawdlstty.com>
+
+<!--
+
 ## 用户手册
 
 安装：在项目目录下运行 `cargo add faml`
@@ -24,8 +38,6 @@ name = $"hello {value + 12}"
     Ok(())
 }
 ```
-
-<!--
 
 ### C++
 
