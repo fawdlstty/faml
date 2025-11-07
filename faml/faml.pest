@@ -5,7 +5,7 @@ COMMENT    = _{ ("//" ~ (!NEWLINE ~ ANY)*) | ("/*" ~ (!"*/" ~ ANY)* ~ "*/") }
 boolean_literal       = @{ "true" | "false" }
 number_literal        = @{ "-"? ~ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
 string_literal        = @{ "\"" ~ ("\\\"" | (!"\"" ~ ANY))* ~ "\"" }
-format_string         = @{ "$\"" ~ ("\\\"" | (!("{" | NEWLINE) ~ ANY))* ~ "\"" }
+format_string         = @{ "$\"" ~ ("\\\"" | (!("{" | "\"" | NEWLINE) ~ ANY))* ~ "\"" }
 format_string_part1   = @{ "$\"" ~ ("\\\"" | (!("{" | NEWLINE) ~ ANY))* ~ "{" }
 format_string_part2   = @{ "}" ~ ("\\\"" | (!("{" | NEWLINE) ~ ANY))* ~ "{" }
 format_string_part3   = @{ "}" ~ ("\\\"" | (!("\"" | NEWLINE) ~ ANY))* ~ "\"" }
@@ -16,7 +16,7 @@ id      = { (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
 ids     = { id ~ ("." ~ id)* }
 anno_if = { "@if" ~ expr ~ NEWLINE+ }
 
-op2         =  { "+" | "-" | "*" | "/" | "**" | "%" | "|" | "&" | "||" | "&&" | "<<" | ">>" | "^" | "<" | "<=" | ">" | ">=" | "==" | "!=" }
+op2         =  { "**" | "||" | "&&" | "<<" | ">>" | "<=" | ">=" | "==" | "!=" | "+" | "-" | "*" | "/" | "%" | "|" | "&" | "^" | "<" | ">" }
 inner_sp    = _{ (NEWLINE*) ~ "," ~ (NEWLINE*) }
 base_expr   =  { literal | ids }
 exprs       =  { (expr ~ (inner_sp ~ expr)*)? }
@@ -49,8 +49,8 @@ num_unit    =  {
 expr_suffix =  { ("(" ~ exprs ~ ")") | ("[" ~ expr ~ "]") | "++" | "--" | num_unit }
 middle_expr =  { expr_prefix* ~ strong_expr ~ expr_suffix* }
 weak_expr   =  { middle_expr ~ (op2 ~ middle_expr)* }
-op3_expr    =  { middle_expr ~ "?" ~ middle_expr ~ ":" ~ middle_expr }
-expr        =  { weak_expr | op3_expr }
+op3_expr    =  { weak_expr ~ "?" ~ middle_expr ~ ":" ~ middle_expr }
+expr        =  { op3_expr | weak_expr }
 
 assign_pair     = { anno_if? ~ ids ~ "=" ~ expr ~ NEWLINE+ }
 map_assign_pair = { ids ~ ":" ~ expr ~ NEWLINE* }

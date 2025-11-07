@@ -369,6 +369,7 @@ impl InvokeExt for Vec<FamlValue> {
 impl InvokeExt for HashMap<String, FamlValue> {
     fn invoke(&mut self, func: &str, args: &Vec<FamlValue>) -> anyhow::Result<FamlValue> {
         match func {
+            "len" if args.len() == 0 => Ok(FamlValue::Int64(self.len() as i64)),
             "to_str" if args.len() == 0 => {
                 let mut s = "{ ".to_string();
                 for (i, (key, item)) in self.iter_mut().enumerate() {

@@ -565,6 +565,7 @@ impl FamlExpr {
         for root_item in root.into_inner() {
             match root_item.as_rule() {
                 Rule::middle_expr => exprs.push(Self::parse_middle_expr(root_item)),
+                Rule::weak_expr => exprs.push(Self::parse_weak_expr(root_item)),
                 _ => unreachable!(),
             }
         }

@@ -97,6 +97,10 @@ sval4_ew = sval4.ends_with("Cc")            // true
 sval4_f = sval4.find("Bb")                  // 2
 sval4_rf = sval4.rfind("Bb")                // 2
 sval4_rp = sval4.repeat(3)                  // "AaBbCcAaBbCcAaBbCc"
+
+sval5 = "hello"
+sval5_replace = sval5.replace("l", "x")     // "hexxo"
+sval5_replace_once = sval5.replace_once("l", "x") // "hexlo"
 ```
 
 数组值函数：
@@ -108,4 +112,30 @@ arr_len = arr.len()       // 5
 arr_rev = arr.reverse()   // [ 5, 4, 3, 2, 1 ]
 arr_str = arr.to_str()    // "[ 1, 2, 3, 4, 5 ]"
 arr_join = arr.join(", ") // "1, 2, 3, 4, 5"
+```
+
+映射值函数：
+
+```faml
+[group]
+map = { "a": 1, "b": 2 }
+map_len = map.len()       // 2
+map_str = map.to_str()    // "{ a: 1, b: 2 }"
+```
+
+时间间隔值函数：
+
+```faml
+[group]
+dur = 1 seconds
+dur_str = dur.to_str()    // "1 seconds"
+```
+
+距离值函数：
+
+```faml
+[group]
+dist = 1000 meters
+dist_km = dist.to_kilometers()  // 1.0
+dist_str = dist.to_str()        // "1000 meters"
 ```

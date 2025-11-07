@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::ops::{Index, IndexMut};
 use std::time::Duration;
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum FamlValue {
     None,
     Bool(bool),
@@ -467,7 +467,7 @@ impl Into<FamlValue> for Distance {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Distance(f64);
 
 impl Distance {
