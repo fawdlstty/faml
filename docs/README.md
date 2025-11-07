@@ -11,12 +11,18 @@ actions:
     type: secondary
 
 features:
-  - title: 简单清晰
-    details: 兼容toml语言语法，编写简单阅读简单
-  - title: 动态修改
-    details: 配置项可互相依赖，使得修改一个值，其他值跟着改
-  - title: 动态计算
-    details: 支持常用数学运算符及数学函数，实现自动化公式计算
+  - title: 简洁易用的语法
+    details: 兼容TOML语法风格，使用方括号定义配置块，等号赋值，保持与TOML一致的可读性和易写性，学习门槛低
+  - title: 强大的动态表达式
+    details: 支持在配置中嵌入表达式，可引用其他配置项、进行算术运算、逻辑判断等操作，实现真正的动态配置
+  - title: 条件配置控制
+    details: 通过@if指令根据条件控制配置项是否生效，便于不同环境下的配置管理
+  - title: 特殊数据类型支持
+    details: 内置对持续时间、距离等特殊数据类型的支持，可直接在配置中使用这些单位（如5 minutes、100 MB）
+  - title: 丰富的表达式系统
+    details: 支持算术运算、比较运算、逻辑运算、三元条件运算符和函数调用等丰富的表达式操作
+  - title: 运行时动态修改
+    details: 配置可在运行时被程序动态修改，并自动重新计算依赖这些值的其他配置项，实现真正的动态配置更新
 
 footer: MIT Licensed | Copyright © 2025 faml
 ---

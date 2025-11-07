@@ -17,7 +17,7 @@ name = $"hello {value + 12}" // hello 42
 
 # Document
 
-<https://faml.fawdlstty.com>
+<https://faml.fawdlstty.com/en/>
 
 <!--
 
