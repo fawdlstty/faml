@@ -2,135 +2,140 @@
 
 [![version](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Ffawdlstty%2Ffaml%2Fmain%2Ffaml%2FCargo.toml&query=package.version&label=version)](https://crates.io/crates/faml)
 ![status](https://img.shields.io/github/actions/workflow/status/fawdlstty/faml/rust.yml)
+[![docs](https://img.shields.io/badge/docs-latest-blue)](https://faml.fawdlstty.com/en/)
 
 English | [简体中文](README.zh_CN.md)
 
-Faml is a dynamic configuration scripting language that can embed script code in the configuration file to achieve dynamic configuration update.
+**faml** is a minimalist and powerful dynamic configuration language that extends TOML with scripting capabilities, enabling dynamic configuration updates at runtime.
 
-example code:
+## Key Features
+
+- **TOML-Compatible Syntax**: Familiar syntax for TOML users with enhanced dynamic capabilities
+- **Dynamic Expressions**: Embed expressions using `$"..."` for runtime value computation
+- **Conditional Configuration**: Use `@if` directives to conditionally enable configuration blocks
+- **Rich Data Types**: Built-in support for durations, distances, and quantified numbers
+- **Cross-Language Support**: Native Rust API with C/C++ and C# bindings
+- **Runtime Mutability**: Modify configuration values at runtime and automatically update dependent values
+
+## Quick Example
 
 ```faml
-[hello]
-value = 30
-name = $"hello {value + 12}" // hello 42
+[server]
+port = 8080
+host = "localhost"
+connection_string = $"{host}:{port}/api"
+
+[cache]
+ttl = 5 minutes
+max_size = 100 MB
 ```
 
-# Document
+## Installation
 
-<https://faml.fawdlstty.com/en/>
+### Rust
 
-<!--
+```bash
+cargo add faml
+```
 
-## Manual
+### C++
 
-Install: Run `cargo add faml` in the project directory
+```bash
+git clone https://github.com/fawdlstty/faml.git
+cd faml
+cargo build --release
+```
+
+### C#
+
+```bash
+dotnet add package faml
+```
+
+## Usage
+
+### Rust
 
 ```rust
+use faml::FamlExpr;
+
 fn main() -> anyhow::Result<()> {
-    let faml_str = r#"
-[hello]
-value = 12
-name = $"hello {value + 12}"
+    let config_str = r#"
+[server]
+port = 8080
+host = "localhost"
+connection_string = $"{host}:{port}/api"
 "#;
-    let mut root = faml::FamlExpr::from_str(faml_str)?;
-    root["hello"]["value"].set_int(30);
-    println!("{}", root["hello"]["name"].evaluate()?.as_str()); // hello 42
+    
+    let mut config = FamlExpr::from_str(config_str)?;
+    config["server"]["port"].set_int(9000);  // Dynamic update
+    
+    let connection_string = config["server"]["connection_string"].evaluate()?.as_str();
+    println!("{}", connection_string); // localhost:9000/api
     Ok(())
 }
 ```
 
 ### C++
 
-Download and compile static libraries (or dynamic libraries)
-
-```shell
-git clone git@github.com:fawdlstty/faml.git
-cd faml
-# Build with C API support
-cargo build --release --target x86_64-pc-windows-msvc
-cargo build --release --target x86_64-unknown-linux-gnu
-```
-
-The static library (or dynamic library) is generated in the `target/release` directory. Copy it to the C++ project and reference it
-
 ```cpp
-#include <iostream>
-#include <string>
-
 #include "faml/faml.hpp"
-#ifdef _MSC_VER
-#pragma comment(lib, "ws2_32.lib")
-#pragma comment(lib, "ntdll.lib")
-#pragma comment(lib, "bcrypt.lib")
-#pragma comment(lib, "Userenv.lib")
-#pragma comment(lib, "faml.lib")
-#endif
 
 int main() {
     auto oexpr = faml::FamlExpr::from_str(R"(
-[hello]
-value = 12
-name = $"hello {value + 12}"
+[server]
+port = 8080
+host = "localhost"
+connection_string = $"{host}:{port}/api"
 )");
-    if (oeroot.index() == 1) {
-        std::cout << std::get<std::string>(oeroot) << std::endl;
+    
+    if (oexpr.index() == 1) {
+        std::cout << std::get<std::string>(oexpr) << std::endl;
         return 0;
     }
-    auto eroot = std::get<faml::FamlExpr>(oeroot);
-    eroot["hello"]["value"].set_int(30);
-    auto oroot = eroot.evaluate();
-    if (oroot.index() == 1) {
-        std::cout << std::get<std::string>(oroot) << std::endl;
+    
+    auto expr = std::get<faml::FamlExpr>(oexpr);
+    expr["server"]["port"].set_int(9000);  // Dynamic update
+    
+    auto ovalue = expr.evaluate();
+    if (ovalue.index() == 1) {
+        std::cout << std::get<std::string>(ovalue) << std::endl;
         return 0;
     }
-    auto root = std::get<faml::FamlValue>(oroot);
-    std::cout << root["hello"]["name"].as_str() << std::endl; // hello 42
+    
+    auto value = std::get<faml::FamlValue>(ovalue);
+    std::cout << value["server"]["connection_string"].as_str() << std::endl; // localhost:9000/api
     return 0;
 }
 ```
 
 ### C#
 
-Run command:
-```sh
-dotnet add package faml
-```
-
-Example:
 ```csharp
-using System;
+using faml;
 
-namespace test {
-    public class Program {
-        public static void Main () {
-            string src = """
-[hello]
-value = 12
-name = $"hello {value + 12}"
-""";
-            var eroot = faml.FamlExpr.from_str (src);
-            eroot ["hello"] ["value"].set_int (30);
-            var root = eroot.evaluate ();
-            Console.WriteLine (root ["hello"] ["name"].as_str()); // hello 42
-            Console.ReadKey ();
-        }
-    }
-}
+string configStr = @"
+[server]
+port = 8080
+host = ""localhost""
+connection_string = $""{host}:{port}/api""
+";
+
+var expr = FamlExpr.from_str(configStr);
+expr["server"]["port"].set_int(9000);  // Dynamic update
+
+var value = expr.evaluate();
+Console.WriteLine(value["server"]["connection_string"].as_str()); // localhost:9000/api
 ```
 
-### Other features
+## Documentation
 
-The value is available when the conditions are met:
+- [Introduction](https://faml.fawdlstty.com/en/guide/00_introduction.html)
+- [Getting Started](https://faml.fawdlstty.com/en/guide/01_hello_world.html)
+- [Syntax Guide](https://faml.fawdlstty.com/en/guide/02_structs_and_types.html)
+- [Expressions](https://faml.fawdlstty.com/en/guide/03_expressions.html)
+- [Methods](https://faml.fawdlstty.com/en/guide/04_methods.html)
 
-```faml
-[hello]
+## License
 
-value = 12
-
-@if value == 12
-name = $"hello {value}"
-```
-
-TODO: 重量、电流、电压、温度等单位
-
--->
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
