@@ -8,6 +8,10 @@ English | [简体中文](README.zh_CN.md)
 
 **faml** is a minimalist and powerful dynamic configuration language that extends TOML with scripting capabilities, enabling dynamic configuration updates at runtime.
 
+## Help
+
+Having trouble? Join the QQ group for help: `1018390466`
+
 ## Key Features
 
 - **TOML-Compatible Syntax**: Familiar syntax for TOML users with enhanced dynamic capabilities
@@ -28,3 +32,10 @@ English | [简体中文](README.zh_CN.md)
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+<!--
+Plan:
+
+1. i18n support
+2. compiler
+-->
