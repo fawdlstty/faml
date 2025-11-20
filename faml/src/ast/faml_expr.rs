@@ -537,24 +537,35 @@ impl FamlExpr {
                 break;
             }
             if i == 5 {
-                for j in 1..ops.len() {
-                    if ops[j - i].1 == i && ops[j].1 == i {
+                let mut j = 1;
+                while j < ops.len() {
+                    if ops[j - 1].1 == i && ops[j].1 == i {
                         exprs.insert(j, exprs[j].clone());
                         ops.insert(j, ("&&".to_string(), Op2Evaluator::get_level("&&")));
+                        j += 2; // Skip the newly inserted elements
+                    } else {
+                        j += 1;
                     }
                 }
             }
-            for idx in 0..ops.len() {
+            let mut idx = 0;
+            while idx < ops.len() {
                 if let Some((_, level)) = ops.get(idx) {
                     if *level != i {
+                        idx += 1;
                         continue;
                     }
+                }
+                // Check bounds before removing elements
+                if idx >= exprs.len() || idx + 1 >= exprs.len() || idx >= ops.len() {
+                    break;
                 }
                 let left = exprs.remove(idx);
                 let right = exprs.remove(idx);
                 let op = ops.remove(idx).0;
                 let expr = FamlExprImpl::Op2((left, op, right)).to_expr();
                 exprs.insert(idx, expr);
+                // Don't increment idx since we've modified the vectors
             }
         }
         exprs.remove(0)
@@ -680,6 +691,41 @@ impl FamlExpr {
         Ok(())
     }
 
+    fn get_temp_name_expr(&self, names: &Vec<String>) -> anyhow::Result<FamlExpr> {
+        let mut names: Vec<_> = names.iter().map(|p| &p[..]).collect();
+        let mut expr = match names.first() {
+            Some(&"nan") => {
+                names.remove(0);
+                FamlValue::Float64(f64::NAN).to_expr()
+            }
+            Some(&"infinity") => {
+                names.remove(0);
+                FamlValue::Float64(f64::INFINITY).to_expr()
+            }
+            Some(&"null") => {
+                names.remove(0);
+                FamlValue::None.to_expr()
+            }
+            Some(&"base") => {
+                names.remove(0);
+                self.base().base_expr.upgrade()?
+            }
+            Some(&"super") => {
+                names.remove(0);
+                let tmp = self.base().super_expr.upgrade()?;
+                tmp.base().super_expr.upgrade()?
+            }
+            _ => self.base().super_expr.upgrade()?,
+        };
+        for name in names {
+            expr = expr
+                .get(name)
+                .ok_or_else(|| anyhow!("node has no field1[{name}]"))?
+                .clone();
+        }
+        Ok(expr)
+    }
+
     pub fn evaluate(&self) -> anyhow::Result<FamlValue> {
         match &self.base().expr {
             FamlExprImpl::None => Ok(FamlValue::None),
@@ -699,37 +745,7 @@ impl FamlExpr {
                 Ok(FamlValue::Map(ret))
             }
             FamlExprImpl::TempName(names) => {
-                let mut names: Vec<_> = names.iter().map(|p| &p[..]).collect();
-                let mut expr = match names.first() {
-                    Some(&"nan") => {
-                        names.remove(0);
-                        FamlValue::Float64(f64::NAN).to_expr()
-                    }
-                    Some(&"infinity") => {
-                        names.remove(0);
-                        FamlValue::Float64(f64::INFINITY).to_expr()
-                    }
-                    Some(&"null") => {
-                        names.remove(0);
-                        FamlValue::None.to_expr()
-                    }
-                    Some(&"base") => {
-                        names.remove(0);
-                        self.base().base_expr.upgrade()?
-                    }
-                    Some(&"super") => {
-                        names.remove(0);
-                        let tmp = self.base().super_expr.upgrade()?;
-                        tmp.base().super_expr.upgrade()?
-                    }
-                    _ => self.base().super_expr.upgrade()?,
-                };
-                for name in names {
-                    expr = expr
-                        .get(name)
-                        .ok_or_else(|| anyhow!("node has no field1[{name}]"))?
-                        .clone();
-                }
+                let expr = self.get_temp_name_expr(names)?;
                 expr.evaluate()
             }
             FamlExprImpl::Op1Prefix((op, a)) => {
@@ -802,8 +818,169 @@ impl FamlExpr {
         }
     }
 
+    fn trace_internal(
+        &self,
+        atom_str: bool,
+        maps: &mut HashMap<String, (FamlValue, String)>,
+    ) -> anyhow::Result<(FamlValue, String)> {
+        Ok(match &self.base().expr {
+            FamlExprImpl::None => (FamlValue::None, "null".to_string()),
+            FamlExprImpl::Value(val) => (val.clone(), val.as_str()),
+            FamlExprImpl::Array(exprs) => {
+                let mut vals = vec![];
+                let mut vstrs = vec![];
+                for expr in exprs {
+                    let (val, vstr) = expr.trace_internal(false, maps)?;
+                    vals.push(val);
+                    vstrs.push(vstr);
+                }
+                (FamlValue::Array(vals), format!("[{}]", vstrs.join(", ")))
+            }
+            FamlExprImpl::Map(map) => {
+                let mut vals = HashMap::new();
+                let mut vstrs = HashMap::new();
+                for (key, expr) in map {
+                    let (val, vstr) = expr.trace_internal(false, maps)?;
+                    vals.insert(key.clone(), val);
+                    vstrs.insert(key.clone(), vstr);
+                }
+                let vstrs: Vec<_> = vstrs
+                    .into_iter()
+                    .map(|(k, v)| format!("{k}: {v}"))
+                    .collect();
+                (FamlValue::Map(vals), format!("{{{}}}", vstrs.join(", ")))
+            }
+            FamlExprImpl::TempName(items) => {
+                let expr = self.get_temp_name_expr(items)?;
+                let name = items.join(".");
+                let (val, vstr) = expr.trace_internal(false, maps)?;
+                maps.insert(name.clone(), (val.clone(), vstr));
+                (val, name)
+            }
+            FamlExprImpl::Op1Prefix((op, expr)) => {
+                let (val, vstr) = expr.trace_internal(true, maps)?;
+                let val = Op1Evaluator::eval_prefix(&op, val)?;
+                let mut vstr = format!("{op}{vstr}");
+                vstr = if atom_str { format!("({vstr})") } else { vstr };
+                (val, vstr)
+            }
+            FamlExprImpl::Op1Suffix((expr, op)) => {
+                let (val, vstr) = expr.trace_internal(true, maps)?;
+                let val = Op1Evaluator::eval_suffix(val, &op)?;
+                let mut vstr = format!("{vstr} {op}");
+                vstr = if atom_str { format!("({vstr})") } else { vstr };
+                (val, vstr)
+            }
+            FamlExprImpl::Op2((a, op, b)) => {
+                let (val_a, vstr_a) = a.trace_internal(true, maps)?;
+                let (val_b, vstr_b) = b.trace_internal(true, maps)?;
+                let val = Op2Evaluator::eval(val_a, &op, val_b)?;
+                let mut vstr = format!("{vstr_a} {op} {vstr_b}");
+                vstr = if atom_str { format!("({vstr})") } else { vstr };
+                (val, vstr)
+            }
+            FamlExprImpl::Op3((a, b, c)) => {
+                let (val_a, vstr_a) = a.trace_internal(true, maps)?;
+                let (val_b, vstr_b) = b.trace_internal(true, maps)?;
+                let (val_c, vstr_c) = c.trace_internal(true, maps)?;
+                let cond = val_a.as_bool().ok_or_else(|| anyhow!("bool expected"))?;
+                let val = if cond { val_b } else { val_c };
+                let mut vstr = format!("{vstr_a} ? {vstr_b} : {vstr_c}");
+                vstr = if atom_str { format!("({vstr})") } else { vstr };
+                (val, vstr)
+            }
+            FamlExprImpl::FormatString((strs, exprs)) => {
+                if strs.len() == 1 && exprs.is_empty() {
+                    let vstr = format!("$\"{}\"", strs[0].escape(true));
+                    (strs[0].clone().into(), vstr)
+                } else {
+                    let mut rval = "".to_string();
+                    let mut rvstr = "".to_string();
+                    for (idx, expr) in exprs.iter().enumerate() {
+                        let (val, vstr) = expr.trace_internal(false, maps)?;
+                        rval.push_str(&strs[idx]);
+                        rval.push_str(&val.as_str());
+                        let vprefix = if idx == 0 { "$\"" } else { "}" };
+                        let cur_str = strs[idx].escape(true);
+                        rvstr.push_str(&format!("{vprefix}{cur_str}{{{vstr}"));
+                    }
+                    rval.push_str(&strs[strs.len() - 1]);
+                    rvstr.push_str(&format!("}}{}\"", strs[strs.len() - 1]));
+                    (rval.into(), rvstr)
+                }
+            }
+            FamlExprImpl::AccessVar((a, b)) => {
+                let val = self.evaluate()?;
+                let (_, a) = a.trace_internal(true, maps)?;
+                let (_, b) = b.trace_internal(true, maps)?;
+                (val, format!("{a}.{b}"))
+            }
+            FamlExprImpl::InvokeFunc((expr, args)) => {
+                let (_, expr_str) = expr.trace_internal(true, maps)?;
+                let mut arg_strs = vec![];
+                for arg in args {
+                    let (_, arg_str) = arg.trace_internal(true, maps)?;
+                    arg_strs.push(arg_str);
+                }
+                let vstr = format!("{}({})", expr_str, arg_strs.join(", "));
+                (self.evaluate()?, vstr)
+            }
+            FamlExprImpl::IfAnno(if_anno) => {
+                let mut val = FamlExpr::new();
+                for (cond, value) in &if_anno.ifcond_values {
+                    if cond.evaluate()?.as_bool() == Some(true) {
+                        val = value.clone();
+                        continue;
+                    }
+                }
+                let (_, val_str) = val.trace_internal(atom_str, maps)?;
+                (self.evaluate()?, val_str)
+            }
+        })
+    }
+
+    pub fn trace(&self, name: &str) -> anyhow::Result<String> {
+        let format_vstr = |name: &str, val: FamlValue, vstr: &str| {
+            let val_str = val.as_str();
+            match name == vstr || vstr == val_str {
+                true => format!("{name} = {val_str}"),
+                false => format!("{name} = {vstr} // ={val_str}"),
+            }
+        };
+
+        let mut maps = HashMap::new();
+        let (val, vstr) = self.trace_internal(false, &mut maps)?;
+        let mut maps = maps
+            .into_iter()
+            .map(|(name, (val, vstr))| format_vstr(&name, val, &vstr))
+            .collect::<Vec<_>>();
+        maps.sort();
+        maps.push(format_vstr(name, val, &vstr));
+        Ok(maps.join("\n"))
+    }
+
+    pub fn set_null(&mut self) {
+        self.base_mut().expr.set_null();
+    }
+
+    pub fn set_bool(&mut self, val: bool) {
+        self.base_mut().expr.set_bool(val);
+    }
+
     pub fn set_int(&mut self, val: i64) {
         self.base_mut().expr.set_int(val);
+    }
+
+    pub fn set_float(&mut self, val: f64) {
+        self.base_mut().expr.set_float(val);
+    }
+
+    pub fn set_string(&mut self, val: impl Into<String>) {
+        self.base_mut().expr.set_string(val);
+    }
+
+    pub fn set_value(&mut self, val: FamlValue) {
+        self.base_mut().expr = FamlExprImpl::Value(val);
     }
 
     pub fn deserialize<T: for<'a> Deserialize<'a>>(&self) -> anyhow::Result<T> {
