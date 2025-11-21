@@ -34,7 +34,7 @@ export default defineUserConfig({
         sidebar: {
           '/guide/': [
             "00_introduction", "01_hello_world", "02_structs_and_types",
-            "03_expressions", "04_methods"
+            "03_expressions", "04_methods", "05_advanced_usage"
           ]
         }
       },
@@ -54,7 +54,7 @@ export default defineUserConfig({
         sidebar: {
           '/en/guide/': [
             "00_introduction", "01_hello_world", "02_structs_and_types",
-            "03_expressions", "04_methods"
+            "03_expressions", "04_methods", "05_advanced_usage"
           ]
         }
       }
