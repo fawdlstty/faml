@@ -304,6 +304,20 @@ impl FamlExpr {
         Ok(expr)
     }
 
+    pub fn from_json(root: serde_json::Value) -> anyhow::Result<Self> {
+        let mut expr = FamlValue::from_json(root)?.to_expr();
+        let base_expr = expr.to_weak();
+        expr.init_weak_expr(base_expr.clone(), base_expr);
+        Ok(expr)
+    }
+
+    pub fn from_yaml(root: serde_yaml::Value) -> anyhow::Result<Self> {
+        let mut expr = FamlValue::from_yaml(root)?.to_expr();
+        let base_expr = expr.to_weak();
+        expr.init_weak_expr(base_expr.clone(), base_expr);
+        Ok(expr)
+    }
+
     fn parse_faml(root: pest::iterators::Pair<'_, Rule>) -> anyhow::Result<Self> {
         let mut ret = FamlExpr::new();
         for root_item in root.into_inner() {
@@ -630,10 +644,10 @@ impl FamlExpr {
                 Rule::ids => {
                     let ids: Vec<_> = root_item.as_str().split('.').collect();
                     for id in ids {
-                        ret.push(id.to_string());
+                        ret.push(id.trim().to_string());
                     }
                 }
-                Rule::id => ret.push(root_item.as_str().to_string()),
+                Rule::id => ret.push(root_item.as_str().trim().to_string()),
                 _ => unreachable!(),
             };
         }
@@ -685,9 +699,11 @@ impl FamlExpr {
                         *self_ = val;
                     }
                 }
-                _ => Err(anyhow!("disallow apply"))?,
+                _ => *self_ = val,
             },
         }
+        let base_expr = self.to_weak();
+        self.init_weak_expr(base_expr.clone(), base_expr);
         Ok(())
     }
 

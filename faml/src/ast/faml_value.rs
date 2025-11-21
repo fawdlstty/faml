@@ -39,7 +39,30 @@ impl Serialize for FamlValue {
 
 impl FamlValue {
     pub fn to_expr(self) -> FamlExpr {
-        FamlExprImpl::Value(self).to_expr()
+        FamlExprImpl::Value(match self {
+            FamlValue::None => FamlValue::None,
+            FamlValue::Bool(b) => FamlValue::Bool(b),
+            FamlValue::Int64(i) => FamlValue::Int64(i),
+            FamlValue::Float64(f) => FamlValue::Float64(f),
+            FamlValue::String(s) => FamlValue::String(s),
+            FamlValue::Array(arr) => {
+                let mut ret = vec![];
+                for val in arr {
+                    ret.push(val.to_expr());
+                }
+                return FamlExprImpl::Array(ret).to_expr();
+            }
+            FamlValue::Map(map) => {
+                let mut ret = HashMap::new();
+                for (key, val) in map {
+                    ret.insert(key, val.to_expr());
+                }
+                return FamlExprImpl::Map(ret).to_expr();
+            }
+            FamlValue::Duration(dur) => FamlValue::Duration(dur),
+            FamlValue::Distance(dist) => FamlValue::Distance(dist),
+        })
+        .to_expr()
     }
 
     pub fn is_none(&self) -> bool {
@@ -196,6 +219,37 @@ impl FamlValue {
         }
     }
 
+    pub fn from_json(root: serde_json::Value) -> anyhow::Result<Self> {
+        match root {
+            serde_json::Value::Null => Ok(FamlValue::None),
+            serde_json::Value::Bool(b) => Ok(FamlValue::Bool(b)),
+            serde_json::Value::Number(n) => {
+                if let Some(n) = n.as_i64() {
+                    Ok(FamlValue::Int64(n))
+                } else if let Some(f) = n.as_f64() {
+                    Ok(FamlValue::Float64(f))
+                } else {
+                    Err(anyhow::anyhow!("unknown number"))
+                }
+            }
+            serde_json::Value::String(s) => Ok(FamlValue::String(s)),
+            serde_json::Value::Array(arr) => {
+                let mut ret = vec![];
+                for val in arr {
+                    ret.push(FamlValue::from_json(val)?);
+                }
+                Ok(FamlValue::Array(ret))
+            }
+            serde_json::Value::Object(map) => {
+                let mut ret = HashMap::new();
+                for (k, v) in map {
+                    ret.insert(k, FamlValue::from_json(v)?);
+                }
+                Ok(FamlValue::Map(ret))
+            }
+        }
+    }
+
     pub fn to_yaml(&self) -> serde_yaml::Value {
         match self {
             FamlValue::None => serde_yaml::Value::Null,
@@ -219,6 +273,41 @@ impl FamlValue {
             }
             FamlValue::Duration(dur) => dur.to_str().into(),
             FamlValue::Distance(dis) => dis.to_str().into(),
+        }
+    }
+
+    pub fn from_yaml(root: serde_yaml::Value) -> anyhow::Result<Self> {
+        match root {
+            serde_yaml::Value::Null => Ok(FamlValue::None),
+            serde_yaml::Value::Bool(b) => Ok(FamlValue::Bool(b)),
+            serde_yaml::Value::Number(n) => {
+                if let Some(n) = n.as_i64() {
+                    Ok(FamlValue::Int64(n))
+                } else if let Some(f) = n.as_f64() {
+                    Ok(FamlValue::Float64(f))
+                } else {
+                    Err(anyhow::anyhow!("unknown number"))
+                }
+            }
+            serde_yaml::Value::String(s) => Ok(FamlValue::String(s)),
+            serde_yaml::Value::Sequence(arr) => {
+                let mut ret = vec![];
+                for val in arr {
+                    ret.push(FamlValue::from_yaml(val)?);
+                }
+                Ok(FamlValue::Array(ret))
+            }
+            serde_yaml::Value::Mapping(map) => {
+                let mut ret = HashMap::new();
+                for (k, v) in map {
+                    ret.insert(
+                        k.as_str().unwrap_or("").to_string(),
+                        FamlValue::from_yaml(v)?,
+                    );
+                }
+                Ok(FamlValue::Map(ret))
+            }
+            serde_yaml::Value::Tagged(tag) => FamlValue::from_yaml(tag.value),
         }
     }
 
