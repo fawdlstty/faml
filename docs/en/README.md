@@ -23,6 +23,12 @@ features:
     details: Supports rich expression operations including arithmetic operations, comparison operations, logical operations, ternary conditional operators, and function calls
   - title: Runtime Dynamic Modification
     details: Configurations can be dynamically modified by programs at runtime and automatically recalculate other configuration items that depend on these values, achieving true dynamic configuration updates
+  - title: Intelligent Computation Tracing
+    details: Provides powerful trace functionality to track each step of complex expression computations, quickly locating the root cause of configuration calculation errors
+  - title: Template-based Configuration Management
+    details: Supports the combined application of template and custom configurations, facilitating the management of multiple similar but slightly different configuration schemes
+  - title: Seamless Integration with Existing Configurations
+    details: Easily integrate FAML expression functionality into existing JSON configurations without modifying the original configuration structure to enjoy dynamic computation capabilities
 
 footer: MIT Licensed | Copyright © 2025 faml
 ---
