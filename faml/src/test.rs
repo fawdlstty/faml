@@ -485,3 +485,248 @@ value = $"hello"
     assert_eq!(evaluated["hello"]["value"].as_str(), "hello");
     Ok(())
 }
+
+// 测试 apply 方法
+#[test]
+fn test_apply_method() -> anyhow::Result<()> {
+    // 创建一个基础的FamlExpr
+    let mut expr1 = FamlExpr::new();
+    expr1["name"].set_string("Alice");
+    expr1["age"].set_int(30);
+
+    // 创建另一个要应用的FamlExpr
+    let mut expr2 = FamlExpr::new();
+    expr2["age"].set_int(35); // 更新年龄
+    expr2["city"].set_string("Beijing"); // 添加新字段
+
+    // 应用expr2到expr1
+    expr1.apply(expr2)?;
+
+    // 验证结果
+    let result = expr1.evaluate()?;
+    assert_eq!(result["name"].as_str(), "Alice"); // 原有字段保持不变
+    assert_eq!(result["age"].as_int().unwrap(), 35); // 年龄被更新
+    assert_eq!(result["city"].as_str(), "Beijing"); // 新增字段被添加
+
+    Ok(())
+}
+
+// 测试 to_json 方法
+#[test]
+fn test_to_json_method() -> anyhow::Result<()> {
+    let faml_str = r#"
+[user]
+name = "Alice"
+age = 30
+active = true
+scores = [85, 92, 78]
+"#;
+    let root = FamlExpr::from_str(faml_str)?;
+    let evaluated = root.evaluate()?;
+
+    let json_value = evaluated.to_json();
+
+    // 验证JSON转换结果
+    assert_eq!(json_value["user"]["name"], "Alice");
+    assert_eq!(json_value["user"]["age"], 30);
+    assert_eq!(json_value["user"]["active"], true);
+
+    let scores = &json_value["user"]["scores"];
+    assert_eq!(scores[0], 85);
+    assert_eq!(scores[1], 92);
+    assert_eq!(scores[2], 78);
+
+    Ok(())
+}
+
+// 测试 from_json 方法
+#[test]
+fn test_from_json_method() -> anyhow::Result<()> {
+    let json_str = r#"{
+        "config": {
+            "server": "localhost",
+            "port": 8080,
+            "features": ["auth", "logging"],
+            "ssl": true
+        }
+    }"#;
+
+    let json_value: serde_json::Value = serde_json::from_str(json_str)?;
+    let expr = FamlExpr::from_json(json_value)?;
+    let evaluated = expr.evaluate()?;
+
+    // 验证从JSON转换的结果
+    assert_eq!(evaluated["config"]["server"].as_str(), "localhost");
+    assert_eq!(evaluated["config"]["port"].as_int().unwrap(), 8080);
+    assert_eq!(evaluated["config"]["ssl"].as_bool().unwrap(), true);
+
+    let features = evaluated["config"]["features"].as_array().unwrap();
+    assert_eq!(features.len(), 2);
+    assert_eq!(features[0].as_str(), "auth");
+    assert_eq!(features[1].as_str(), "logging");
+
+    Ok(())
+}
+
+// 测试 to_yaml 方法
+#[test]
+fn test_to_yaml_method() -> anyhow::Result<()> {
+    let faml_str = r#"
+[settings]
+database_url = "postgresql://localhost:5432/mydb"
+debug_mode = false
+max_connections = 100
+"#;
+    let root = FamlExpr::from_str(faml_str)?;
+    let evaluated = root.evaluate()?;
+
+    let yaml_value = evaluated.to_yaml();
+
+    // 验证YAML转换结果
+    assert_eq!(
+        yaml_value["settings"]["database_url"].as_str().unwrap(),
+        "postgresql://localhost:5432/mydb"
+    );
+    assert_eq!(
+        yaml_value["settings"]["debug_mode"].as_bool().unwrap(),
+        false
+    );
+    assert_eq!(
+        yaml_value["settings"]["max_connections"].as_i64().unwrap(),
+        100
+    );
+
+    Ok(())
+}
+
+// 测试 from_yaml 方法
+#[test]
+fn test_from_yaml_method() -> anyhow::Result<()> {
+    let yaml_str = r#"
+app:
+  name: MyApp
+  version: "1.0.0"
+  environments:
+    - dev
+    - prod
+  logging:
+    level: info
+    enabled: true
+"#;
+
+    let yaml_value: serde_yaml::Value = serde_yaml::from_str(yaml_str)?;
+    let expr = FamlExpr::from_yaml(yaml_value)?;
+    let evaluated = expr.evaluate()?;
+
+    // 验证从YAML转换的结果
+    assert_eq!(evaluated["app"]["name"].as_str(), "MyApp");
+    assert_eq!(evaluated["app"]["version"].as_str(), "1.0.0");
+
+    let environments = evaluated["app"]["environments"].as_array().unwrap();
+    assert_eq!(environments.len(), 2);
+    assert_eq!(environments[0].as_str(), "dev");
+    assert_eq!(environments[1].as_str(), "prod");
+
+    assert_eq!(evaluated["app"]["logging"]["level"].as_str(), "info");
+    assert_eq!(
+        evaluated["app"]["logging"]["enabled"].as_bool().unwrap(),
+        true
+    );
+
+    Ok(())
+}
+
+// 测试 trace 方法
+#[test]
+fn test_trace_method() -> anyhow::Result<()> {
+    let faml_str = r#"
+[calculation]
+a = 10
+b = 20
+sum = a + b
+product = a * b
+"#;
+    let root = FamlExpr::from_str(faml_str)?;
+
+    // 测试追踪sum表达式
+    let sum_trace = root["calculation"]["sum"].trace("sum")?;
+    // 验证trace输出包含计算表达式
+    assert!(sum_trace.contains("sum = a + b // =30"));
+
+    // 测试追踪product表达式
+    let product_trace = root["calculation"]["product"].trace("product")?;
+    // 验证trace输出包含计算表达式
+    assert!(product_trace.contains("product = a * b // =200"));
+
+    Ok(())
+}
+
+// 测试 native 函数注册和调用
+#[test]
+fn test_native_function_registration() -> anyhow::Result<()> {
+    // 注册一个简单的 native 函数
+    crate::Native::add_func("add_ten", |n: i64| n + 10);
+
+    let faml_str = r#"
+[hello]
+val = native.add_ten(12)
+"#;
+    let expr = FamlExpr::from_str(faml_str)?;
+    let val = expr["hello"]["val"].evaluate()?;
+    assert_eq!(val.as_int().unwrap(), 22);
+
+    Ok(())
+}
+
+// 测试多个参数的 native 函数
+#[test]
+fn test_native_function_multiple_args() -> anyhow::Result<()> {
+    // 注册一个多参数的 native 函数
+    crate::Native::add_func("multiply_add", |a: i64, b: i64, c: i64| a * b + c);
+
+    let faml_str = r#"
+[calc]
+result = native.multiply_add(3, 4, 5)
+"#;
+    let expr = FamlExpr::from_str(faml_str)?;
+    let val = expr["calc"]["result"].evaluate()?;
+    assert_eq!(val.as_int().unwrap(), 17); // 3 * 4 + 5 = 17
+
+    Ok(())
+}
+
+// 测试返回浮点数的 native 函数
+#[test]
+fn test_native_function_float_return() -> anyhow::Result<()> {
+    // 注册一个返回浮点数的 native 函数
+    crate::Native::add_func("divide", |a: f64, b: f64| a / b);
+
+    let faml_str = r#"
+[calc]
+result = native.divide(10.0, 3.0)
+"#;
+    let expr = FamlExpr::from_str(faml_str)?;
+    let val = expr["calc"]["result"].evaluate()?;
+    assert_eq!(val.as_float().unwrap(), 10.0 / 3.0);
+
+    Ok(())
+}
+
+// 测试字符串处理的 native 函数
+#[test]
+fn test_native_function_string_processing() -> anyhow::Result<()> {
+    // 注册一个处理字符串的 native 函数
+    crate::Native::add_func("concat_strings", |a: String, b: String| {
+        format!("{}{}", a, b)
+    });
+
+    let faml_str = r#"
+[text]
+combined = native.concat_strings("Hello, ", "World!")
+"#;
+    let expr = FamlExpr::from_str(faml_str)?;
+    let val = expr["text"]["combined"].evaluate()?;
+    assert_eq!(val.as_str(), "Hello, World!");
+
+    Ok(())
+}
