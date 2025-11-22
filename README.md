@@ -6,28 +6,13 @@
 
 English | [简体中文](README.zh_CN.md)
 
-**faml** is a minimalist and powerful dynamic configuration language that extends TOML with scripting capabilities, enabling dynamic configuration updates at runtime.
-
-## Help
-
-Having trouble? Join the QQ group for help: `1018390466`
-
-## Key Features
-
-- **TOML-Compatible Syntax**: Familiar syntax for TOML users with enhanced dynamic capabilities
-- **Dynamic Expressions**: Embed expressions using `$"..."` for runtime value computation
-- **Conditional Configuration**: Use `@if` directives to conditionally enable configuration blocks
-- **Rich Data Types**: Built-in support for durations, distances, and quantified numbers
-- **Cross-Language Support**: Native Rust API with C/C++ and C# bindings
-- **Runtime Mutability**: Modify configuration values at runtime and automatically update dependent values
+**faml** is a minimalist and powerful dynamic configuration language that extends TOML with scripting capabilities, enabling dynamic configuration updates at runtime. For more interesting ways to play, please refer to the documentation.
 
 ## Documentation
 
-- [Introduction](https://faml.fawdlstty.com/en/guide/00_introduction.html)
-- [Getting Started](https://faml.fawdlstty.com/en/guide/01_hello_world.html)
-- [Syntax Guide](https://faml.fawdlstty.com/en/guide/02_structs_and_types.html)
-- [Expressions](https://faml.fawdlstty.com/en/guide/03_expressions.html)
-- [Methods](https://faml.fawdlstty.com/en/guide/04_methods.html)
+<https://faml.fawdlstty.com/en/>
+
+Having trouble? Join the QQ group for help: `1018390466`
 
 ## License
 
@@ -36,6 +21,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 <!--
 Plan:
 
-1. i18n support
-2. compiler
+1. host function
+2. compile
+3. formal verification
 -->
