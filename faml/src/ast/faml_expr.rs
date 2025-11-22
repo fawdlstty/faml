@@ -1,5 +1,6 @@
 use super::eval::{Op1Evaluator, Op2Evaluator};
 use super::faml_value::FamlValue;
+use crate::Native;
 use crate::ast::invoke::InvokeExt;
 use crate::string_utils::IntoBaseExt;
 use anyhow::anyhow;
@@ -805,24 +806,32 @@ impl FamlExpr {
                 };
                 Ok(val.cloned().unwrap_or(FamlValue::None))
             }
-            FamlExprImpl::InvokeFunc((expr, args)) => match &expr.base().expr {
-                FamlExprImpl::TempName(names) => {
-                    let mut names = names.clone();
-                    let func = names.pop().ok_or_else(|| anyhow!("func name expected"))?;
-                    let mut obj_val = {
-                        let mut obj_expr = FamlExprImpl::TempName(names).to_expr();
-                        obj_expr.base_mut().base_expr = expr.base().base_expr.clone();
-                        obj_expr.base_mut().super_expr = expr.base().super_expr.clone();
-                        obj_expr.evaluate()?
-                    };
+            FamlExprImpl::InvokeFunc((expr, args)) => {
+                if let FamlExprImpl::TempName(names) = &expr.base().expr {
                     let mut arg_vals = vec![];
                     for arg in args {
                         arg_vals.push(arg.evaluate()?);
                     }
-                    obj_val.invoke(&func, &arg_vals)
+                    //
+                    if names.len() == 2 && names[0] == "native" {
+                        let func = Native::get_func(&names[1])
+                            .ok_or_else(|| anyhow!("native func not found"))?;
+                        Ok(func.call(arg_vals))
+                    } else {
+                        let mut names = names.clone();
+                        let func = names.pop().ok_or_else(|| anyhow!("func name expected"))?;
+                        let mut obj_val = {
+                            let mut obj_expr = FamlExprImpl::TempName(names).to_expr();
+                            obj_expr.base_mut().base_expr = expr.base().base_expr.clone();
+                            obj_expr.base_mut().super_expr = expr.base().super_expr.clone();
+                            obj_expr.evaluate()?
+                        };
+                        obj_val.invoke(&func, &arg_vals)
+                    }
+                } else {
+                    Err(anyhow!("unsupported invoke type"))?
                 }
-                _ => Err(anyhow!("unsupported invoke type"))?,
-            },
+            }
             FamlExprImpl::IfAnno(if_anno) => {
                 for (cond, value) in &if_anno.ifcond_values {
                     if cond.evaluate()?.as_bool() == Some(true) {
@@ -932,14 +941,18 @@ impl FamlExpr {
                 (val, format!("{a}.{b}"))
             }
             FamlExprImpl::InvokeFunc((expr, args)) => {
-                let (_, expr_str) = expr.trace_internal(true, maps)?;
-                let mut arg_strs = vec![];
-                for arg in args {
-                    let (_, arg_str) = arg.trace_internal(true, maps)?;
-                    arg_strs.push(arg_str);
+                if let FamlExprImpl::TempName(names) = &expr.base().expr {
+                    let expr_str = names.join(".");
+                    let mut arg_strs = vec![];
+                    for arg in args {
+                        let (_, arg_str) = arg.trace_internal(true, maps)?;
+                        arg_strs.push(arg_str);
+                    }
+                    let vstr = format!("{}({})", expr_str, arg_strs.join(", "));
+                    (self.evaluate()?, vstr)
+                } else {
+                    Err(anyhow!("unsupported invoke type"))?
                 }
-                let vstr = format!("{}({})", expr_str, arg_strs.join(", "));
-                (self.evaluate()?, vstr)
             }
             FamlExprImpl::IfAnno(if_anno) => {
                 let mut val = FamlExpr::new();

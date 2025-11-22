@@ -556,6 +556,41 @@ impl Into<FamlValue> for Distance {
     }
 }
 
+impl From<FamlValue> for bool {
+    fn from(value: FamlValue) -> Self {
+        match value {
+            FamlValue::Bool(b) => b,
+            _ => false,
+        }
+    }
+}
+
+impl From<FamlValue> for i64 {
+    fn from(value: FamlValue) -> Self {
+        match value {
+            FamlValue::Float64(f) => f.round() as i64,
+            FamlValue::Int64(i) => i,
+            _ => 0,
+        }
+    }
+}
+
+impl From<FamlValue> for f64 {
+    fn from(value: FamlValue) -> Self {
+        match value {
+            FamlValue::Float64(f) => f,
+            FamlValue::Int64(i) => i as f64,
+            _ => 0.0,
+        }
+    }
+}
+
+impl From<FamlValue> for String {
+    fn from(value: FamlValue) -> Self {
+        value.as_str()
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Distance(f64);
 
