@@ -112,3 +112,28 @@ In the above code, `json_str1` is our original JSON configuration, and `faml_str
 ```
 Some(555)
 ```
+
+## Calling Host Functions
+
+If the value of a configuration item requires complex calculations, host language functions can be called within FAML. Sample code is as follows:
+
+```rust
+fn main() -> anyhow::Result<()> {
+    faml::Native::add_func("test", |n: i64| n + 10);
+
+    let faml_str = r#"
+[hello]
+val = native.test(12)
+"#;
+    let expr = faml::FamlExpr::from_str(faml_str)?;
+    let val = expr["hello"]["val"].evaluate()?.as_int();
+    println!("{val:?}");
+    Ok(())
+}
+```
+
+First, register the host function through `add_func`, then call it in FAML via `native.function_name`. The result of this code execution is:
+
+```log
+Some(22)
+```

@@ -112,3 +112,28 @@ expr = a + b
 ```
 Some(555)
 ```
+
+## 调用宿主函数
+
+如果配置项的值需要做复杂的计算，那么可以在faml中调用宿主语言的函数。示例代码如下：
+
+```rust
+fn main() -> anyhow::Result<()> {
+    faml::Native::add_func("test", |n: i64| n + 10);
+
+    let faml_str = r#"
+[hello]
+val = native.test(12)
+"#;
+    let expr = faml::FamlExpr::from_str(faml_str)?;
+    let val = expr["hello"]["val"].evaluate()?.as_int();
+    println!("{val:?}");
+    Ok(())
+}
+```
+
+首先通过add_func注册宿主函数，然后在faml里通过 `native.函数名` 调用。此代码运行结果为：
+
+```log
+Some(22)
+```
