@@ -21,7 +21,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 <!--
 Plan:
 
-1. host function
+1. distributed dispatch
 2. compile
 3. formal verification
 -->

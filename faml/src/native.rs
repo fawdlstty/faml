@@ -6,9 +6,7 @@ use std::sync::{LazyLock, Mutex};
 pub trait FasCallable: Send + Sync {
     fn call(&self, args: Vec<FamlValue>) -> FamlValue;
     fn clone_(&self) -> Box<dyn FasCallable + 'static>;
-    //fn to_fas_value(self, func_name: String) -> FamlValue;
     fn get_arg_count(&self) -> usize;
-    //fn get_type(&self) -> AstType;
 }
 
 impl std::fmt::Debug for dyn FasCallable {
@@ -52,25 +50,9 @@ macro_rules! FasWrapper {
                 Box::new(copy)
             }
 
-            // fn to_fas_value(self, _func_name: String) -> FamlValue {
-            //     // let native_func = AstNativeFunc {
-            //     //     ret_type: R::get_ast_type(),
-            //     //     name: func_name,
-            //     //     arg_types: vec![],
-            //     //     func_impl: Box::new(self),
-            //     // };
-            //     FamlValue::Func(Box::new(AstFuncExpr::new(AstFunc::NativeFunc(
-            //         Box::new(self),
-            //     ))))
-            // }
-
             fn get_arg_count(&self) -> usize {
                 0
             }
-
-            // fn get_type(&self) -> AstType {
-            //     AstType::Func((Box::new(R::get_ast_type()), vec![]))
-            // }
         }
 
         impl<T, R> FasToWrapper<R> for T
@@ -110,27 +92,9 @@ macro_rules! FasWrapper {
                 Box::new(copy)
             }
 
-            // fn to_fas_value(self, _func_name: String) -> FamlValue {
-            //     // let native_func = AstNativeFunc {
-            //     //     ret_type: R::get_ast_type(),
-            //     //     name: func_name,
-            //     //     arg_types: vec![$($name1::get_ast_type(),)*],
-            //     //     func_impl: Box::new(self),
-            //     // };
-            //     FamlValue::Func(Box::new(AstFuncExpr::new(AstFunc::NativeFunc(
-            //         Box::new(self),
-            //     ))))
-            // }
-
             fn get_arg_count(&self) -> usize {
 				calc_arg_count!($($name1)*)
             }
-
-            // fn get_type(&self) -> AstType {
-            //     AstType::Func((Box::new(R::get_ast_type()), vec![
-            //         $($name1::get_ast_type()),*
-            //     ]))
-            // }
         }
 
         impl<T, $($name1,)* R> FasToWrapper<($($name1,)* R)> for T
@@ -145,17 +109,6 @@ macro_rules! FasWrapper {
                 $sname(self, PhantomData)
             }
         }
-
-        // impl<T, $($name1), * ,R> Clone for $sname<T, $($name1),*, R>
-        // where
-        //     T: Fn($($name1,)*) -> R + Clone + Send + Sync + 'static,
-        //     $($name1: From<FamlValue> + Send + Sync + 'static,)*
-        //     R: Into<FamlValue> + Send + Sync + 'static,
-        // {
-        //     fn clone(&self) -> Self {
-        //         Self(self.0.clone(), PhantomData)
-        //     }
-        // }
     };
 }
 
