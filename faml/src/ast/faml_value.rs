@@ -1,4 +1,5 @@
 use crate::ast::invoke::DurationExt;
+use crate::string_utils::IntoBaseExt;
 use crate::{FamlExpr, FamlExprImpl};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -121,6 +122,35 @@ impl FamlValue {
             FamlValue::Int64(i) => i.to_string(),
             FamlValue::Float64(f) => f.to_string(),
             FamlValue::String(s) => s.clone(),
+            FamlValue::Array(arr) => {
+                let arr: Vec<_> = arr.iter().map(|item| item.as_str()).collect();
+                format!("[ {} ]", arr.join(", "))
+            }
+            FamlValue::Map(map) => {
+                let mut ret = "{ ".to_string();
+                for (key, value) in map.iter() {
+                    if !ret.is_empty() {
+                        ret.push_str(", ");
+                    }
+                    ret.push_str(key);
+                    ret.push_str(": ");
+                    ret.push_str(&value.as_str());
+                }
+                ret.push_str(" }");
+                ret
+            }
+            FamlValue::Duration(dur) => dur.to_str(),
+            FamlValue::Distance(dis) => dis.to_str(),
+        }
+    }
+
+    pub fn as_print_str(&self) -> String {
+        match self {
+            FamlValue::None => "null".to_string(),
+            FamlValue::Bool(b) => b.to_string(),
+            FamlValue::Int64(i) => i.to_string(),
+            FamlValue::Float64(f) => f.to_string(),
+            FamlValue::String(s) => format!("\"{}\"", s.escape(false)),
             FamlValue::Array(arr) => {
                 let arr: Vec<_> = arr.iter().map(|item| item.as_str()).collect();
                 format!("[ {} ]", arr.join(", "))

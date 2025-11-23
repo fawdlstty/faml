@@ -100,11 +100,11 @@ impl FamlExpr {
         }
     }
 
-    fn to_weak(&self) -> WeakFamlExpr {
+    pub fn to_weak(&self) -> WeakFamlExpr {
         WeakFamlExpr(Arc::downgrade(&(self.0)))
     }
 
-    fn is_none(&self) -> bool {
+    pub fn is_none(&self) -> bool {
         match self.base().expr {
             FamlExprImpl::None => true,
             _ => false,
@@ -300,6 +300,17 @@ impl FamlExpr {
             Some(root) => Self::parse_faml(root),
             None => Err(anyhow!("cannot parse content")),
         }?;
+        let base_expr = expr.to_weak();
+        expr.init_weak_expr(base_expr.clone(), base_expr);
+        Ok(expr)
+    }
+
+    pub fn expr_from_str(content: &str) -> anyhow::Result<Self> {
+        let mut root = FamlParser::parse(Rule::expr, content)?;
+        let mut expr = match root.next() {
+            Some(root) => Self::parse_expr(root),
+            None => Err(anyhow!("cannot parse content"))?,
+        };
         let base_expr = expr.to_weak();
         expr.init_weak_expr(base_expr.clone(), base_expr);
         Ok(expr)
@@ -1015,10 +1026,8 @@ impl FamlExpr {
     pub fn deserialize<T: for<'a> Deserialize<'a>>(&self) -> anyhow::Result<T> {
         Ok(serde_json::from_value(self.evaluate()?.to_json())?)
     }
-}
 
-impl FamlExpr {
-    fn init_weak_expr(&mut self, base_expr: WeakFamlExpr, super_expr: WeakFamlExpr) {
+    pub fn init_weak_expr(&mut self, base_expr: WeakFamlExpr, super_expr: WeakFamlExpr) {
         let self_expr = self.to_weak();
         self.base_mut()
             .init_weak_expr(base_expr, super_expr, self_expr);
