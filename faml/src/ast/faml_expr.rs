@@ -31,12 +31,19 @@ pub enum FamlExprImpl {
     AccessVar((FamlExpr, FamlExpr)),
     InvokeFunc((FamlExpr, Vec<FamlExpr>)),
     IfAnno(FamlExprIfAnno),
+    ConstraintAnno(FamlExprConstraintAnno),
 }
 
 #[derive(Debug, Clone)]
 pub struct FamlExprIfAnno {
     pub ifcond_values: Vec<(FamlExpr, FamlExpr)>,
     pub default_value: FamlExpr,
+}
+
+#[derive(Debug, Clone)]
+pub struct FamlExprConstraintAnno {
+    pub constraints: Vec<FamlExpr>,
+    pub value: FamlExpr,
 }
 
 #[derive(Debug, Clone)]
@@ -71,6 +78,15 @@ impl FamlExprIfAnno {
             expr1.init_weak_expr(base_expr.clone(), super_expr.clone());
         }
         self.default_value
+            .init_weak_expr(base_expr.clone(), super_expr.clone());
+    }
+}
+impl FamlExprConstraintAnno {
+    pub fn init_weak_expr(&mut self, base_expr: WeakFamlExpr, super_expr: WeakFamlExpr) {
+        for expr in &mut self.constraints {
+            expr.init_weak_expr(base_expr.clone(), super_expr.clone());
+        }
+        self.value
             .init_weak_expr(base_expr.clone(), super_expr.clone());
     }
 }
@@ -220,14 +236,6 @@ impl FamlExpr {
             }
         }
         obj_ref
-    }
-
-    pub fn make_if_anno(if_anno: FamlExpr, value: FamlExpr) -> Self {
-        FamlExprImpl::IfAnno(FamlExprIfAnno {
-            ifcond_values: vec![(if_anno, value)],
-            default_value: FamlExpr::new(),
-        })
-        .to_expr()
     }
 }
 
@@ -397,13 +405,20 @@ impl FamlExpr {
     }
 
     fn parse_assign_pair(root: pest::iterators::Pair<'_, Rule>) -> (String, Self) {
+        let mut constraints = vec![];
         let mut anno_if_expr = None;
         let mut keys = vec![];
         let mut value = FamlExpr::new();
         for root_item in root.into_inner() {
             match root_item.as_rule() {
-                Rule::anno_if => {
-                    anno_if_expr = Some(Self::parse_expr(root_item.into_inner().next().unwrap()))
+                Rule::anno => {
+                    let root_child = root_item.into_inner().next().unwrap();
+                    if root_child.as_rule() == Rule::anno_constraint {
+                        constraints.push(Self::parse_expr(root_child.into_inner().next().unwrap()));
+                    } else if root_child.as_rule() == Rule::anno_if {
+                        anno_if_expr =
+                            Some(Self::parse_expr(root_child.into_inner().next().unwrap()));
+                    }
                 }
                 Rule::ids => keys = Self::parse_ids(root_item),
                 Rule::expr => value = Self::parse_expr(root_item),
@@ -416,6 +431,10 @@ impl FamlExpr {
                 default_value: FamlExpr::new(),
             })
             .to_expr();
+        }
+        if !constraints.is_empty() {
+            value = FamlExprImpl::ConstraintAnno(FamlExprConstraintAnno { constraints, value })
+                .to_expr();
         }
         while keys.len() > 1 {
             let mut tmp_map = HashMap::new();
@@ -851,6 +870,7 @@ impl FamlExpr {
                 }
                 return if_anno.default_value.evaluate();
             }
+            FamlExprImpl::ConstraintAnno(cst_anno) => cst_anno.value.evaluate(),
         }
     }
 
@@ -976,6 +996,9 @@ impl FamlExpr {
                 let (_, val_str) = val.trace_internal(atom_str, maps)?;
                 (self.evaluate()?, val_str)
             }
+            FamlExprImpl::ConstraintAnno(cst_anno) => {
+                cst_anno.value.trace_internal(atom_str, maps)?
+            }
         })
     }
 
@@ -1088,6 +1111,11 @@ impl FamlExprBase {
             }
             FamlExprImpl::IfAnno(if_anno) => {
                 if_anno.init_weak_expr(base_expr.clone(), super_expr.clone());
+            }
+            FamlExprImpl::ConstraintAnno(cst_anno) => {
+                cst_anno
+                    .value
+                    .init_weak_expr(base_expr.clone(), super_expr.clone());
             }
         }
     }

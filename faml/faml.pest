@@ -12,9 +12,12 @@ format_string_part3   = @{ "}" ~ ("\\\"" | (!("\"" | NEWLINE) ~ ANY))* ~ "\"" }
 format_string_literal =  { format_string | (format_string_part1 ~ expr ~ (format_string_part2 ~ expr)* ~ format_string_part3) }
 literal               =  { boolean_literal | number_literal | string_literal | format_string_literal }
 
-id      = { (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
-ids     = { id ~ ("." ~ id)* }
-anno_if = { "@if" ~ expr ~ NEWLINE+ }
+id  = { (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+ids = { id ~ ("." ~ id)* }
+
+anno_if         = { "@if" ~ expr ~ NEWLINE+ }
+anno_constraint = { "@constraint" ~ expr ~ NEWLINE+ }
+anno            = { anno_if | anno_constraint }
 
 op2         =  { "**" | "||" | "&&" | "<<" | ">>" | "<=" | ">=" | "==" | "!=" | "+" | "-" | "*" | "/" | "%" | "|" | "&" | "^" | "<" | ">" }
 inner_sp    = _{ (NEWLINE*) ~ "," ~ (NEWLINE*) }
@@ -52,7 +55,7 @@ weak_expr   =  { middle_expr ~ (op2 ~ middle_expr)* }
 op3_expr    =  { weak_expr ~ "?" ~ middle_expr ~ ":" ~ middle_expr }
 expr        =  { op3_expr | weak_expr }
 
-assign_pair     = { anno_if? ~ ids ~ "=" ~ expr ~ NEWLINE+ }
+assign_pair     = { anno* ~ ids ~ "=" ~ expr ~ NEWLINE+ }
 map_assign_pair = { ids ~ ":" ~ expr ~ NEWLINE* }
 
 group_head       = { "[" ~ ids ~ "]" ~ NEWLINE+ }
