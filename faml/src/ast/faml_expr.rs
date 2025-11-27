@@ -316,7 +316,7 @@ impl FamlExpr {
     pub fn expr_from_str(content: &str) -> anyhow::Result<Self> {
         let mut root = FamlParser::parse(Rule::expr, content)?;
         let mut expr = match root.next() {
-            Some(root) => Self::parse_expr(root),
+            Some(root) => Self::parse_expr(root)?,
             None => Err(anyhow!("cannot parse content"))?,
         };
         let base_expr = expr.to_weak();
@@ -361,7 +361,7 @@ impl FamlExpr {
         for root_item in root.into_inner() {
             match root_item.as_rule() {
                 Rule::anno_if => {
-                    anno_if_expr = Some(Self::parse_expr(root_item.into_inner().next().unwrap()))
+                    anno_if_expr = Some(Self::parse_expr(root_item.into_inner().next().unwrap())?)
                 }
                 Rule::group_head => head = Self::parse_ids(root_item),
                 Rule::group_array_head => {
@@ -369,7 +369,7 @@ impl FamlExpr {
                     is_array_head = true;
                 }
                 Rule::assign_pair => {
-                    let (key, mut value) = Self::parse_assign_pair(root_item);
+                    let (key, mut value) = Self::parse_assign_pair(root_item)?;
                     let mut keys: Vec<_> = key.split('.').map(|key| key.to_string()).collect();
                     while keys.len() > 1 {
                         let mut tmp_map = HashMap::new();
@@ -404,7 +404,7 @@ impl FamlExpr {
         Ok(ret)
     }
 
-    fn parse_assign_pair(root: pest::iterators::Pair<'_, Rule>) -> (String, Self) {
+    fn parse_assign_pair(root: pest::iterators::Pair<'_, Rule>) -> anyhow::Result<(String, Self)> {
         let mut constraints = vec![];
         let mut anno_if_expr = None;
         let mut keys = vec![];
@@ -414,14 +414,15 @@ impl FamlExpr {
                 Rule::anno => {
                     let root_child = root_item.into_inner().next().unwrap();
                     if root_child.as_rule() == Rule::anno_constraint {
-                        constraints.push(Self::parse_expr(root_child.into_inner().next().unwrap()));
+                        constraints
+                            .push(Self::parse_expr(root_child.into_inner().next().unwrap())?);
                     } else if root_child.as_rule() == Rule::anno_if {
                         anno_if_expr =
-                            Some(Self::parse_expr(root_child.into_inner().next().unwrap()));
+                            Some(Self::parse_expr(root_child.into_inner().next().unwrap())?);
                     }
                 }
                 Rule::ids => keys = Self::parse_ids(root_item),
-                Rule::expr => value = Self::parse_expr(root_item),
+                Rule::expr => value = Self::parse_expr(root_item)?,
                 _ => unreachable!(),
             }
         }
@@ -441,54 +442,66 @@ impl FamlExpr {
             tmp_map.insert(keys.remove(keys.len() - 1), value);
             value = FamlExprImpl::Map(tmp_map).to_expr();
         }
-        (keys.remove(0), value)
+        Ok((keys.remove(0), value))
     }
 
-    fn parse_expr(root: pest::iterators::Pair<'_, Rule>) -> Self {
+    fn parse_expr(root: pest::iterators::Pair<'_, Rule>) -> anyhow::Result<Self> {
         let root_item = root.into_inner().next().unwrap();
         match root_item.as_rule() {
-            Rule::weak_expr => Self::parse_weak_expr(root_item),
+            Rule::json_expr => {
+                let mut json_str = root_item.as_str();
+                json_str = json_str.trim_start_matches("``json").trim_end_matches("``");
+                let root: serde_json::Value = serde_json::from_str(json_str)?;
+                Self::from_json(root)
+            }
+            Rule::yaml_expr => {
+                let mut yaml_str = root_item.as_str();
+                yaml_str = yaml_str.trim_start_matches("``yaml").trim_end_matches("``");
+                let root: serde_yaml::Value = serde_yaml::from_str(yaml_str)?;
+                Self::from_yaml(root)
+            }
             Rule::op3_expr => Self::parse_op3_expr(root_item),
+            Rule::weak_expr => Self::parse_weak_expr(root_item),
             _ => unreachable!(),
         }
     }
 
-    fn parse_base_expr(root: pest::iterators::Pair<'_, Rule>) -> Self {
+    fn parse_base_expr(root: pest::iterators::Pair<'_, Rule>) -> anyhow::Result<Self> {
         let root_item = root.into_inner().next().unwrap();
         match root_item.as_rule() {
             Rule::literal => Self::parse_literal(root_item),
-            Rule::ids => FamlExprImpl::TempName(Self::parse_ids(root_item)).to_expr(),
+            Rule::ids => Ok(FamlExprImpl::TempName(Self::parse_ids(root_item)).to_expr()),
             _ => unreachable!(),
         }
     }
 
-    fn parse_array_expr(root: pest::iterators::Pair<'_, Rule>) -> Self {
+    fn parse_array_expr(root: pest::iterators::Pair<'_, Rule>) -> anyhow::Result<Self> {
         let mut exprs = vec![];
         for root_item in root.into_inner() {
             match root_item.as_rule() {
-                Rule::expr => exprs.push(Self::parse_expr(root_item)),
+                Rule::expr => exprs.push(Self::parse_expr(root_item)?),
                 Rule::exprs => return Self::parse_array_expr(root_item),
                 _ => unreachable!(),
             }
         }
-        FamlExprImpl::Array(exprs).to_expr()
+        Ok(FamlExprImpl::Array(exprs).to_expr())
     }
 
-    fn parse_map_expr(root: pest::iterators::Pair<'_, Rule>) -> Self {
+    fn parse_map_expr(root: pest::iterators::Pair<'_, Rule>) -> anyhow::Result<Self> {
         let mut map = HashMap::new();
         for root_item in root.into_inner() {
             match root_item.as_rule() {
                 Rule::map_assign_pair => {
-                    let (key, value) = Self::parse_assign_pair(root_item);
+                    let (key, value) = Self::parse_assign_pair(root_item)?;
                     map.insert(key, value);
                 }
                 _ => unreachable!(),
             }
         }
-        FamlExprImpl::Map(map).to_expr()
+        Ok(FamlExprImpl::Map(map).to_expr())
     }
 
-    fn parse_strong_expr(root: pest::iterators::Pair<'_, Rule>) -> Self {
+    fn parse_strong_expr(root: pest::iterators::Pair<'_, Rule>) -> anyhow::Result<Self> {
         let root_item = root.into_inner().next().unwrap();
         match root_item.as_rule() {
             Rule::base_expr => Self::parse_base_expr(root_item),
@@ -498,37 +511,39 @@ impl FamlExpr {
         }
     }
 
-    fn parse_middle_expr(root: pest::iterators::Pair<'_, Rule>) -> Self {
+    fn parse_middle_expr(root: pest::iterators::Pair<'_, Rule>) -> anyhow::Result<Self> {
         enum SuffixOp {
             AccessVar(FamlExpr),
             InvokeFunc(Vec<FamlExpr>),
             Op(String),
         }
         impl SuffixOp {
-            pub fn parse(root: pest::iterators::Pair<'_, Rule>) -> Self {
+            pub fn parse(root: pest::iterators::Pair<'_, Rule>) -> anyhow::Result<Self> {
                 let root_str = root.as_str();
                 let mut args = None;
                 for root_item in root.into_inner() {
                     match root_item.as_rule() {
-                        Rule::num_unit => return SuffixOp::Op(root_str.to_string()),
+                        Rule::num_unit => return Ok(SuffixOp::Op(root_str.to_string())),
                         Rule::exprs => {
                             let mut exprs = vec![];
                             for root_item1 in root_item.into_inner() {
                                 match root_item1.as_rule() {
-                                    Rule::expr => exprs.push(FamlExpr::parse_expr(root_item1)),
+                                    Rule::expr => exprs.push(FamlExpr::parse_expr(root_item1)?),
                                     _ => unreachable!(),
                                 }
                             }
                             args = Some(exprs)
                         }
-                        Rule::expr => return SuffixOp::AccessVar(FamlExpr::parse_expr(root_item)),
+                        Rule::expr => {
+                            return Ok(SuffixOp::AccessVar(FamlExpr::parse_expr(root_item)?));
+                        }
                         _ => unreachable!(),
                     }
                 }
                 if let Some(args) = args {
-                    SuffixOp::InvokeFunc(args)
+                    Ok(SuffixOp::InvokeFunc(args))
                 } else {
-                    SuffixOp::Op(root_str.to_string())
+                    Ok(SuffixOp::Op(root_str.to_string()))
                 }
             }
         }
@@ -538,9 +553,9 @@ impl FamlExpr {
         let mut suffix_ops = vec![];
         for root_item in root.into_inner() {
             match root_item.as_rule() {
-                Rule::strong_expr => expr = Self::parse_strong_expr(root_item),
+                Rule::strong_expr => expr = Self::parse_strong_expr(root_item)?,
                 Rule::expr_prefix => prefix_ops.push(root_item.as_str().to_string()),
-                Rule::expr_suffix => suffix_ops.push(SuffixOp::parse(root_item)),
+                Rule::expr_suffix => suffix_ops.push(SuffixOp::parse(root_item)?),
                 _ => unreachable!(),
             }
         }
@@ -555,16 +570,16 @@ impl FamlExpr {
             }
             .to_expr();
         }
-        expr
+        Ok(expr)
     }
 
-    fn parse_weak_expr(root: pest::iterators::Pair<'_, Rule>) -> Self {
+    fn parse_weak_expr(root: pest::iterators::Pair<'_, Rule>) -> anyhow::Result<Self> {
         let mut exprs = vec![];
         let mut ops = vec![];
         //
         for root_item in root.into_inner() {
             match root_item.as_rule() {
-                Rule::middle_expr => exprs.push(Self::parse_middle_expr(root_item)),
+                Rule::middle_expr => exprs.push(Self::parse_middle_expr(root_item)?),
                 Rule::op2 => ops.push(root_item.as_str().to_string()),
                 _ => unreachable!(),
             }
@@ -613,27 +628,27 @@ impl FamlExpr {
                 // Don't increment idx since we've modified the vectors
             }
         }
-        exprs.remove(0)
+        Ok(exprs.remove(0))
     }
 
-    fn parse_op3_expr(root: pest::iterators::Pair<'_, Rule>) -> Self {
+    fn parse_op3_expr(root: pest::iterators::Pair<'_, Rule>) -> anyhow::Result<Self> {
         let mut exprs = vec![];
         for root_item in root.into_inner() {
             match root_item.as_rule() {
-                Rule::middle_expr => exprs.push(Self::parse_middle_expr(root_item)),
-                Rule::weak_expr => exprs.push(Self::parse_weak_expr(root_item)),
+                Rule::middle_expr => exprs.push(Self::parse_middle_expr(root_item)?),
+                Rule::weak_expr => exprs.push(Self::parse_weak_expr(root_item)?),
                 _ => unreachable!(),
             }
         }
         let expr1 = exprs.remove(0);
         let expr2 = exprs.remove(0);
         let expr3 = exprs.remove(0);
-        FamlExprImpl::Op3((expr1, expr2, expr3)).to_expr()
+        Ok(FamlExprImpl::Op3((expr1, expr2, expr3)).to_expr())
     }
 
-    fn parse_literal(root: pest::iterators::Pair<'_, Rule>) -> Self {
+    fn parse_literal(root: pest::iterators::Pair<'_, Rule>) -> anyhow::Result<Self> {
         let root_item = root.into_inner().next().unwrap();
-        FamlExprImpl::Value(match root_item.as_rule() {
+        Ok(FamlExprImpl::Value(match root_item.as_rule() {
             Rule::boolean_literal => FamlValue::Bool(root_item.as_str() == "true"),
             Rule::number_literal => match root_item.as_str().parse::<i64>() {
                 Ok(n) => FamlValue::Int64(n),
@@ -646,26 +661,28 @@ impl FamlExpr {
             Rule::format_string_literal => return Self::parse_format_string_literal(root_item),
             _ => unreachable!(),
         })
-        .to_expr()
+        .to_expr())
     }
 
-    fn parse_format_string_literal(root: pest::iterators::Pair<'_, Rule>) -> Self {
+    fn parse_format_string_literal(root: pest::iterators::Pair<'_, Rule>) -> anyhow::Result<Self> {
         let mut strs = vec![];
         let mut exprs = vec![];
         for root_item in root.into_inner() {
             match root_item.as_rule() {
                 Rule::format_string => {
-                    return FamlExprImpl::Value(FamlValue::String(root_item.as_str().into_base()))
-                        .to_expr();
+                    return Ok(FamlExprImpl::Value(FamlValue::String(
+                        root_item.as_str().into_base(),
+                    ))
+                    .to_expr());
                 }
                 Rule::format_string_part1 => strs.push(root_item.as_str().into_base()),
                 Rule::format_string_part2 => strs.push(root_item.as_str().into_base()),
                 Rule::format_string_part3 => strs.push(root_item.as_str().into_base()),
-                Rule::expr => exprs.push(Self::parse_expr(root_item)),
+                Rule::expr => exprs.push(Self::parse_expr(root_item)?),
                 _ => unreachable!(),
             }
         }
-        FamlExprImpl::FormatString((strs, exprs)).to_expr()
+        Ok(FamlExprImpl::FormatString((strs, exprs)).to_expr())
     }
 
     fn parse_ids(root: pest::iterators::Pair<'_, Rule>) -> Vec<String> {

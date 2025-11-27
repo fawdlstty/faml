@@ -51,9 +51,11 @@ num_unit    =  {
 }
 expr_suffix =  { ("(" ~ exprs ~ ")") | ("[" ~ expr ~ "]") | "++" | "--" | num_unit }
 middle_expr =  { expr_prefix* ~ strong_expr ~ expr_suffix* }
-weak_expr   =  { middle_expr ~ (op2 ~ middle_expr)* }
+json_expr   = @{ ("``json" ~ (!"``" ~ ANY)* ~ "``") }
+yaml_expr   = @{ ("``yaml" ~ (!"``" ~ ANY)* ~ "``") }
 op3_expr    =  { weak_expr ~ "?" ~ middle_expr ~ ":" ~ middle_expr }
-expr        =  { op3_expr | weak_expr }
+weak_expr   =  { middle_expr ~ (op2 ~ middle_expr)* }
+expr        =  { json_expr | yaml_expr | op3_expr | weak_expr }
 
 assign_pair     = { anno* ~ ids ~ "=" ~ expr ~ NEWLINE+ }
 map_assign_pair = { ids ~ ":" ~ expr ~ NEWLINE* }
