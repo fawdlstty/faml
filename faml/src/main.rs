@@ -1,23 +1,5 @@
 use std::io::Write;
 
-fn main() -> anyhow::Result<()> {
-    let faml_str = r#"
-[test]
-json_val = ``json
-{ "a": "b", "c": "d" }
-``
-yaml_val = ``yaml
-aa: 1
-bb:
-  - cc: dd
-``
-"#;
-    let expr = faml::FamlExpr::from_str(faml_str)?;
-    let val = expr.evaluate()?;
-    println!("{}", val.to_json());
-    Ok(())
-}
-
 fn read_line(tip: &str) -> anyhow::Result<String> {
     print!("{tip}");
     std::io::stdout().flush()?;
@@ -27,7 +9,7 @@ fn read_line(tip: &str) -> anyhow::Result<String> {
     Ok(input)
 }
 
-fn main1() -> anyhow::Result<()> {
+fn main() -> anyhow::Result<()> {
     println!(
         "{} {}",
         std::env!("CARGO_PKG_NAME"),
