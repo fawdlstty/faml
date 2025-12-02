@@ -1,4 +1,4 @@
-use crate::ast::invoke::DurationExt;
+use crate::expr::invoke::DurationExt;
 use crate::string_utils::IntoBaseExt;
 use crate::{FamlExpr, FamlExprImpl};
 use serde::{Deserialize, Serialize};
@@ -17,6 +17,8 @@ pub enum FamlValue {
     Map(HashMap<String, FamlValue>),
     Duration(Duration),
     Distance(Distance),
+    Json(serde_json::Value),
+    Yaml(serde_yaml::Value),
 }
 
 impl Serialize for FamlValue {
@@ -34,6 +36,8 @@ impl Serialize for FamlValue {
             FamlValue::Map(map) => map.serialize(serializer),
             FamlValue::Duration(dur) => serializer.serialize_str(&dur.to_str()),
             FamlValue::Distance(dis) => serializer.serialize_str(&dis.to_str()),
+            FamlValue::Json(root) => root.serialize(serializer),
+            FamlValue::Yaml(root) => root.serialize(serializer),
         }
     }
 }
@@ -62,6 +66,8 @@ impl FamlValue {
             }
             FamlValue::Duration(dur) => FamlValue::Duration(dur),
             FamlValue::Distance(dist) => FamlValue::Distance(dist),
+            FamlValue::Json(root) => FamlValue::Json(root),
+            FamlValue::Yaml(root) => FamlValue::Yaml(root),
         })
         .to_expr()
     }
@@ -141,6 +147,8 @@ impl FamlValue {
             }
             FamlValue::Duration(dur) => dur.to_str(),
             FamlValue::Distance(dis) => dis.to_str(),
+            FamlValue::Json(root) => serde_json::to_string(&root).unwrap_or("".to_string()),
+            FamlValue::Yaml(root) => serde_yaml::to_string(&root).unwrap_or("".to_string()),
         }
     }
 
@@ -170,6 +178,8 @@ impl FamlValue {
             }
             FamlValue::Duration(dur) => dur.to_str(),
             FamlValue::Distance(dis) => dis.to_str(),
+            FamlValue::Json(root) => serde_json::to_string(&root).unwrap_or("".to_string()),
+            FamlValue::Yaml(root) => serde_yaml::to_string(&root).unwrap_or("".to_string()),
         }
     }
 
@@ -246,6 +256,11 @@ impl FamlValue {
             }
             FamlValue::Duration(dur) => dur.to_str().into(),
             FamlValue::Distance(dis) => dis.to_str().into(),
+            FamlValue::Json(root) => root.clone(),
+            FamlValue::Yaml(root) => match Self::from_yaml(root.clone()) {
+                Ok(value) => value.to_json(),
+                Err(_) => serde_json::Value::Null,
+            },
         }
     }
 
@@ -303,6 +318,11 @@ impl FamlValue {
             }
             FamlValue::Duration(dur) => dur.to_str().into(),
             FamlValue::Distance(dis) => dis.to_str().into(),
+            FamlValue::Json(root) => match Self::from_json(root.clone()) {
+                Ok(value) => value.to_yaml(),
+                Err(_) => serde_yaml::Value::Null,
+            },
+            FamlValue::Yaml(root) => root.clone(),
         }
     }
 

@@ -17,11 +17,3 @@ Having trouble? Join the QQ group for help: `1018390466`
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-<!--
-Plan:
-
-1. distributed dispatch
-2. compile
-3. formal verification
--->

@@ -1,4 +1,4 @@
-use crate::{FamlValue, ast::faml_value::Distance};
+use crate::{FamlValue, expr::faml_value::Distance};
 use anyhow::anyhow;
 use std::{collections::HashMap, f64::consts::PI, time::Duration};
 
@@ -18,6 +18,8 @@ impl InvokeExt for FamlValue {
             FamlValue::Map(map) => map.invoke(func, args),
             FamlValue::Duration(dur) => dur.invoke(func, args),
             FamlValue::Distance(dist) => dist.invoke(func, args),
+            FamlValue::Json(root) => root.invoke(func, args),
+            FamlValue::Yaml(root) => root.invoke(func, args),
         }
     }
 }
@@ -444,6 +446,24 @@ impl InvokeExt for Distance {
                 args.len()
             ))
         }
+    }
+}
+
+impl InvokeExt for serde_json::Value {
+    fn invoke(&mut self, func: &str, args: &Vec<FamlValue>) -> anyhow::Result<FamlValue> {
+        Err(anyhow!(
+            "unknown json.{func} with args[count: {}]",
+            args.len()
+        ))?
+    }
+}
+
+impl InvokeExt for serde_yaml::Value {
+    fn invoke(&mut self, func: &str, args: &Vec<FamlValue>) -> anyhow::Result<FamlValue> {
+        Err(anyhow!(
+            "unknown yaml.{func} with args[count: {}]",
+            args.len()
+        ))?
     }
 }
 

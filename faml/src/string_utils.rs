@@ -1,6 +1,7 @@
 pub trait IntoBaseExt {
     fn into_base(&self) -> String;
     fn escape(&self, dup_quote: bool) -> String;
+    fn to_pascal_case(&self) -> String;
 }
 
 impl IntoBaseExt for str {
@@ -25,5 +26,12 @@ impl IntoBaseExt for str {
             ret = ret.replace("{", "{{").replace("}", "}}");
         }
         ret
+    }
+
+    fn to_pascal_case(&self) -> String {
+        self.split('_')
+            .map(|s| s.chars().next().unwrap().to_uppercase().collect::<String>())
+            .collect::<Vec<_>>()
+            .join("")
     }
 }

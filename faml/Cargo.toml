@@ -24,5 +24,6 @@ serde_yaml = "0.9.34"
 
 [features]
 default = []
+generate = []
 
 # cargo publish --allow-dirty --registry crates-io

@@ -1,5 +1,5 @@
 use super::faml_value::{ApplyExt, FamlValue};
-use crate::ast::faml_value::Distance;
+use crate::expr::faml_value::Distance;
 use anyhow::anyhow;
 use std::ops::*;
 use std::{collections::HashMap, sync::OnceLock, time::Duration};

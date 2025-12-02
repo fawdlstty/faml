@@ -1,7 +1,7 @@
 use super::eval::{Op1Evaluator, Op2Evaluator};
 use super::faml_value::FamlValue;
 use crate::Native;
-use crate::ast::invoke::InvokeExt;
+use crate::expr::invoke::InvokeExt;
 use crate::string_utils::IntoBaseExt;
 use anyhow::anyhow;
 use pest::Parser;
@@ -48,7 +48,7 @@ pub struct FamlExprConstraintAnno {
 
 #[derive(Debug, Clone)]
 pub struct FamlExprBase {
-    expr: FamlExprImpl,
+    pub expr: FamlExprImpl,
     base_expr: WeakFamlExpr,
     super_expr: WeakFamlExpr,
 }
@@ -450,15 +450,19 @@ impl FamlExpr {
         match root_item.as_rule() {
             Rule::json_expr => {
                 let mut json_str = root_item.as_str();
-                json_str = json_str.trim_start_matches("``json").trim_end_matches("``");
+                json_str = json_str
+                    .trim_start_matches("json###")
+                    .trim_end_matches("###");
                 let root: serde_json::Value = serde_json::from_str(json_str)?;
-                Self::from_json(root)
+                Ok(FamlValue::Json(root).to_expr())
             }
             Rule::yaml_expr => {
                 let mut yaml_str = root_item.as_str();
-                yaml_str = yaml_str.trim_start_matches("``yaml").trim_end_matches("``");
+                yaml_str = yaml_str
+                    .trim_start_matches("yaml###")
+                    .trim_end_matches("###");
                 let root: serde_yaml::Value = serde_yaml::from_str(yaml_str)?;
-                Self::from_yaml(root)
+                Ok(FamlValue::Yaml(root).to_expr())
             }
             Rule::op3_expr => Self::parse_op3_expr(root_item),
             Rule::weak_expr => Self::parse_weak_expr(root_item),

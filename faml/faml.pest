@@ -51,8 +51,8 @@ num_unit    =  {
 }
 expr_suffix =  { ("(" ~ exprs ~ ")") | ("[" ~ expr ~ "]") | "++" | "--" | num_unit }
 middle_expr =  { expr_prefix* ~ strong_expr ~ expr_suffix* }
-json_expr   = @{ ("``json" ~ (!"``" ~ ANY)* ~ "``") }
-yaml_expr   = @{ ("``yaml" ~ (!"``" ~ ANY)* ~ "``") }
+json_expr   = @{ ("json###" ~ (!"###" ~ ANY)* ~ "###") }
+yaml_expr   = @{ ("yaml###" ~ (!"###" ~ ANY)* ~ "###") }
 op3_expr    =  { weak_expr ~ "?" ~ middle_expr ~ ":" ~ middle_expr }
 weak_expr   =  { middle_expr ~ (op2 ~ middle_expr)* }
 expr        =  { json_expr | yaml_expr | op3_expr | weak_expr }
